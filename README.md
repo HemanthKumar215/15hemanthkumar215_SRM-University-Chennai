@@ -289,6 +289,8 @@ streamlit run app/streamlit_app.py
 ```
 Open your browser to `http://localhost:8501`. Toggle between **Demo Patient** and **Upload Patient Data**, and switch between **Dark Midnight** and **Clinical Light**.
 
+A fresh clone runs the demo on the 10-patient sample cohort in `data/sample/` (14 days each). To use the full 500-patient, 30-day cohort, first run `make data` (or `python -m src.data_gen.generate_all`).
+
 ### 3b. Open the Interactive Presentation & Architecture Walkthrough
 The PDFs in `docs/` are the submission copies. The same documents are also interactive web pages:
 

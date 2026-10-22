@@ -148,8 +148,14 @@ def load_synthetic_cohort() -> Tuple[pd.DataFrame, pd.DataFrame]:
     ehr_path = PROJECT_ROOT / "data" / "ehr_profiles.csv"
     cgm_path = PROJECT_ROOT / "data" / "cgm_wearable.parquet"
 
+    # The full CGM cohort is generated locally (`make data`) and git-ignored, so a
+    # fresh clone falls back to the 10-patient sample cohort shipped in data/sample/.
     if not ehr_path.exists() or not cgm_path.exists():
-        st.error("Data files not found in data/. Please generate cohort data first.")
+        ehr_path = PROJECT_ROOT / "data" / "sample" / "ehr_profiles_sample.csv"
+        cgm_path = PROJECT_ROOT / "data" / "sample" / "cgm_wearable_sample.parquet"
+
+    if not ehr_path.exists() or not cgm_path.exists():
+        st.error("Data files not found in data/. Please generate cohort data first (`make data`).")
         st.stop()
 
     ehr_df = pd.read_csv(ehr_path)
@@ -289,11 +295,12 @@ def main() -> None:
                 index=0,
             )
 
+            last_day = int(cgm_cohort["day"].max())
             day_range = st.slider(
                 "Observation Window (Days)",
                 min_value=0,
-                max_value=29,
-                value=(25, 29),
+                max_value=last_day,
+                value=(max(0, last_day - 4), last_day),
             )
 
             patient_row = ehr_cohort[ehr_cohort["patient_id"] == selected_pid].iloc[0]
