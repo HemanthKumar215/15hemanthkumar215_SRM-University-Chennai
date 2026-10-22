@@ -22,7 +22,7 @@
 | **Team Name** | 15hemanthkumar215 |
 | **College / Institution** | SRM University, Chennai |
 | **Submission Folder / Repository** | `15hemanthkumar215_SRM-University-Chennai` (Team Name_College Name) |
-| **Team Members** | P Hemanth Kumar *(TODO: Add co-author/team member names if applicable)* |
+| **Team Members** | P Hemanth Kumar — Team Leader (sole member) |
 | **Demo Video** | `TODO: Add 20+ minute demo video link (YouTube / Google Drive)` |
 | **Architecture Diagram (PDF)** | [docs/architecture.pdf](./docs/architecture.pdf) • [Interactive HTML walkthrough](./docs/architecture.html) |
 | **Presentation Deck (PDF, 14 slides)** | [docs/presentation.pdf](./docs/presentation.pdf) • [Interactive HTML slideshow](./docs/presentation.html) |
