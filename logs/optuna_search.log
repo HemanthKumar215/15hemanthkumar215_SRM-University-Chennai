@@ -1,0 +1,9 @@
+2026-10-21 18:53:26 | INFO     | __main__ | Starting Optuna search (3 trials) on device: cpu
+2026-10-21 18:53:43 | INFO     | src.features.lazy_dataset | LazySpikeDataset: indexed 8800 samples across 440 patients (15.5% positive)
+2026-10-21 18:54:04 | INFO     | src.features.lazy_dataset | LazySpikeDataset: indexed 600 samples across 60 patients (13.7% positive)
+2026-10-21 19:13:44 | INFO     | src.features.lazy_dataset | LazySpikeDataset: indexed 8800 samples across 440 patients (15.5% positive)
+2026-10-21 19:14:05 | INFO     | src.features.lazy_dataset | LazySpikeDataset: indexed 600 samples across 60 patients (13.7% positive)
+2026-10-21 19:42:42 | INFO     | src.features.lazy_dataset | LazySpikeDataset: indexed 8800 samples across 440 patients (15.5% positive)
+2026-10-21 19:43:31 | INFO     | src.features.lazy_dataset | LazySpikeDataset: indexed 600 samples across 60 patients (13.7% positive)
+2026-10-21 21:28:14 | INFO     | __main__ | Optuna search completed. Best Trial #1 -> Val AUROC: 0.9086
+2026-10-21 21:28:14 | INFO     | __main__ | Best parameters: {'learning_rate': 0.002088008150108932, 'gru_hidden_dim': 64, 'gru_dropout': 0.1, 'fusion_dropout': 0.4, 'batch_size': 64}

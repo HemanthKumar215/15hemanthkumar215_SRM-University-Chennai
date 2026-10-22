@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-10-21T18:53:07.279375",
+  "run_id": "stage_b_finetune",
+  "stage": "Fine-tune",
+  "model_type": "fusion",
+  "hparams": {
+    "epochs": 3,
+    "lr": 0.0001
+  },
+  "metrics": {
+    "val_auroc": 0.9133,
+    "test": {
+      "auroc": 0.9338,
+      "auprc": 0.2474,
+      "f1": 0.1961,
+      "precision": 0.1087,
+      "recall": 1.0,
+      "n_samples": 135,
+      "n_pos": 5
+    }
+  },
+  "notes": "Fine-tuned on real cohort"
+}

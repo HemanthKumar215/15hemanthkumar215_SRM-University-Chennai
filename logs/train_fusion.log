@@ -1,0 +1,88 @@
+2026-10-20 22:35:11 | INFO     | __main__ | Device: cpu
+2026-10-20 22:35:12 | INFO     | __main__ | Patient split: train=350, val=50, test=100
+2026-10-20 22:35:12 | INFO     | __main__ | Building datasets once for all ablation variants ...
+2026-10-20 22:35:12 | INFO     | src.features.dataset | SpikeDataset: 28000 samples, 20301 positive (72.5%)
+2026-10-20 22:35:13 | INFO     | src.features.dataset | SpikeDataset: 2000 samples, 1529 positive (76.5%)
+2026-10-20 22:35:13 | INFO     | src.features.dataset | SpikeDataset: 4000 samples, 2852 positive (71.3%)
+2026-10-20 22:35:13 | INFO     | __main__ | ============================================================
+2026-10-20 22:35:13 | INFO     | __main__ | Training: fusion
+2026-10-20 22:35:13 | INFO     | __main__ | ============================================================
+2026-10-20 22:35:13 | INFO     | __main__ | Model: fusion  params: 49057
+2026-10-20 22:35:14 | INFO     | __main__ | Training fusion for 30 epochs ...
+2026-10-20 22:52:20 | INFO     | __main__ |   Epoch  1/30  loss=0.1524  val_auroc=0.9774  val_f1=0.9498
+2026-10-20 23:01:06 | INFO     | __main__ |   Epoch  5/30  loss=0.0926  val_auroc=0.9790  val_f1=0.9460
+2026-10-20 23:13:36 | INFO     | __main__ |   Epoch 10/30  loss=0.0789  val_auroc=0.9857  val_f1=0.9557
+2026-10-21 12:15:42 | INFO     | __main__ | Device: cpu
+2026-10-21 12:15:42 | INFO     | __main__ | Patient split: train=350, val=50, test=100
+2026-10-21 12:15:42 | INFO     | __main__ | Building datasets once for all ablation variants ...
+2026-10-21 12:15:46 | INFO     | src.features.dataset | SpikeDataset: 14000 samples, 10263 positive (73.3%)
+2026-10-21 12:15:47 | INFO     | src.features.dataset | SpikeDataset: 1000 samples, 734 positive (73.4%)
+2026-10-21 12:15:49 | INFO     | src.features.dataset | SpikeDataset: 2000 samples, 1464 positive (73.2%)
+2026-10-21 12:15:49 | INFO     | __main__ | ============================================================
+2026-10-21 12:15:49 | INFO     | __main__ | Training: fusion
+2026-10-21 12:15:49 | INFO     | __main__ | ============================================================
+2026-10-21 12:15:49 | INFO     | __main__ | Model: fusion  params: 49057
+2026-10-21 12:15:52 | INFO     | __main__ | Training fusion for 10 epochs ...
+2026-10-21 12:23:45 | INFO     | __main__ |   Epoch  1/10  loss=0.1989  val_auroc=0.9583  val_f1=0.9341
+2026-10-21 12:39:17 | INFO     | __main__ |   Epoch  5/10  loss=0.1108  val_auroc=0.9751  val_f1=0.9342
+2026-10-21 12:41:38 | INFO     | __main__ |   Epoch 10/10  loss=0.0918  val_auroc=0.9786  val_f1=0.9505
+2026-10-21 12:41:39 | INFO     | __main__ | fusion test metrics: AUROC=0.9735  AUPRC=0.9900  F1=0.9272
+2026-10-21 12:41:39 | INFO     | __main__ | Saved -> C:\Users\P Hemanth Kumar\digital twin\models\fusion_model.pt
+2026-10-21 12:41:39 | INFO     | __main__ | ============================================================
+2026-10-21 12:41:39 | INFO     | __main__ | Training: sensor_only
+2026-10-21 12:41:39 | INFO     | __main__ | ============================================================
+2026-10-21 12:41:39 | INFO     | __main__ | Model: sensor_only  params: 42945
+2026-10-21 12:41:39 | INFO     | __main__ | Training sensor_only for 10 epochs ...
+2026-10-21 12:44:48 | INFO     | __main__ |   Epoch  1/10  loss=0.2122  val_auroc=0.9504  val_f1=0.9218
+2026-10-21 12:53:21 | INFO     | __main__ |   Epoch  5/10  loss=0.1227  val_auroc=0.9716  val_f1=0.9385
+2026-10-21 12:55:50 | INFO     | __main__ |   Epoch 10/10  loss=0.1054  val_auroc=0.9760  val_f1=0.9447
+2026-10-21 12:55:51 | INFO     | __main__ | sensor_only test metrics: AUROC=0.9715  AUPRC=0.9892  F1=0.9332
+2026-10-21 12:55:51 | INFO     | __main__ | Saved -> C:\Users\P Hemanth Kumar\digital twin\models\sensor_only_model.pt
+2026-10-21 12:55:51 | INFO     | __main__ | ============================================================
+2026-10-21 12:55:51 | INFO     | __main__ | Training: static_only
+2026-10-21 12:55:51 | INFO     | __main__ | ============================================================
+2026-10-21 12:55:51 | INFO     | __main__ | Model: static_only  params: 6241
+2026-10-21 12:55:51 | INFO     | __main__ | Training static_only for 10 epochs ...
+2026-10-21 12:55:52 | INFO     | __main__ |   Epoch  1/10  loss=0.3582  val_auroc=0.6816  val_f1=0.6474
+2026-10-21 12:55:56 | INFO     | __main__ |   Epoch  5/10  loss=0.3378  val_auroc=0.6829  val_f1=0.6326
+2026-10-21 12:56:01 | INFO     | __main__ |   Epoch 10/10  loss=0.3338  val_auroc=0.6792  val_f1=0.6173
+2026-10-21 12:56:01 | INFO     | __main__ | static_only test metrics: AUROC=0.6330  AUPRC=0.8464  F1=0.5323
+2026-10-21 12:56:01 | INFO     | __main__ | Saved -> C:\Users\P Hemanth Kumar\digital twin\models\static_only_model.pt
+2026-10-21 12:56:03 | INFO     | __main__ | All training complete in 2414.2 s
+2026-10-21 14:37:02 | INFO     | __main__ | Device: cpu
+2026-10-21 14:37:03 | INFO     | __main__ | Patient split: train=350, val=50, test=100
+2026-10-21 14:37:03 | INFO     | __main__ | Building datasets once for all ablation variants ...
+2026-10-21 14:37:04 | INFO     | src.features.dataset | SpikeDataset: 14000 samples, 2183 positive (15.6%)
+2026-10-21 14:37:04 | INFO     | src.features.dataset | SpikeDataset: 1000 samples, 132 positive (13.2%)
+2026-10-21 14:37:04 | INFO     | src.features.dataset | SpikeDataset: 2000 samples, 275 positive (13.8%)
+2026-10-21 14:37:04 | INFO     | __main__ | ============================================================
+2026-10-21 14:37:04 | INFO     | __main__ | Training: fusion
+2026-10-21 14:37:04 | INFO     | __main__ | ============================================================
+2026-10-21 14:37:04 | INFO     | __main__ | Model: fusion  params: 49057
+2026-10-21 14:37:07 | INFO     | __main__ | Training fusion for 10 epochs ...
+2026-10-21 14:39:46 | INFO     | __main__ |   Epoch  1/10  loss=0.9765  val_auroc=0.8206  val_f1=0.4374
+2026-10-21 14:51:59 | INFO     | __main__ |   Epoch  5/10  loss=0.6278  val_auroc=0.8884  val_f1=0.5901
+2026-10-21 17:35:50 | INFO     | __main__ |   Epoch 10/10  loss=0.5760  val_auroc=0.9010  val_f1=0.5882
+2026-10-21 17:35:51 | INFO     | __main__ | fusion test metrics: AUROC=0.9008  AUPRC=0.5417  F1=0.6302
+2026-10-21 17:35:51 | INFO     | __main__ | Saved -> C:\Users\P Hemanth Kumar\digital twin\models\fusion_model.pt
+2026-10-21 17:35:51 | INFO     | __main__ | ============================================================
+2026-10-21 17:35:51 | INFO     | __main__ | Training: sensor_only
+2026-10-21 17:35:51 | INFO     | __main__ | ============================================================
+2026-10-21 17:35:51 | INFO     | __main__ | Model: sensor_only  params: 42945
+2026-10-21 17:35:51 | INFO     | __main__ | Training sensor_only for 10 epochs ...
+2026-10-21 17:38:53 | INFO     | __main__ |   Epoch  1/10  loss=1.0254  val_auroc=0.7659  val_f1=0.3821
+2026-10-21 17:46:10 | INFO     | __main__ |   Epoch  5/10  loss=0.7560  val_auroc=0.8810  val_f1=0.5324
+2026-10-21 17:49:15 | INFO     | __main__ |   Epoch 10/10  loss=0.6160  val_auroc=0.9274  val_f1=0.6273
+2026-10-21 17:49:17 | INFO     | __main__ | sensor_only test metrics: AUROC=0.9210  AUPRC=0.5495  F1=0.6505
+2026-10-21 17:49:17 | INFO     | __main__ | Saved -> C:\Users\P Hemanth Kumar\digital twin\models\sensor_only_model.pt
+2026-10-21 17:49:17 | INFO     | __main__ | ============================================================
+2026-10-21 17:49:17 | INFO     | __main__ | Training: static_only
+2026-10-21 17:49:17 | INFO     | __main__ | ============================================================
+2026-10-21 17:49:17 | INFO     | __main__ | Model: static_only  params: 6241
+2026-10-21 17:49:17 | INFO     | __main__ | Training static_only for 10 epochs ...
+2026-10-21 17:49:18 | INFO     | __main__ |   Epoch  1/10  loss=1.1580  val_auroc=0.6377  val_f1=0.2930
+2026-10-21 17:49:22 | INFO     | __main__ |   Epoch  5/10  loss=0.9754  val_auroc=0.6872  val_f1=0.3185
+2026-10-21 17:49:28 | INFO     | __main__ |   Epoch 10/10  loss=0.9415  val_auroc=0.7164  val_f1=0.3399
+2026-10-21 17:49:28 | INFO     | __main__ | static_only test metrics: AUROC=0.7060  AUPRC=0.2161  F1=0.3319
+2026-10-21 17:49:28 | INFO     | __main__ | Saved -> C:\Users\P Hemanth Kumar\digital twin\models\static_only_model.pt
+2026-10-21 17:49:28 | INFO     | __main__ | All training complete in 11544.3 s

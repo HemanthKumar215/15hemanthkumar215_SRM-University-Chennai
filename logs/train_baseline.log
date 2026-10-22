@@ -1,0 +1,62 @@
+2026-10-20 17:40:18 | INFO     | __main__ | Loading data ...
+2026-10-20 17:40:34 | INFO     | src.features.feature_engineering | Building feature matrix ...
+2026-10-20 17:40:34 | INFO     | src.features.feature_engineering |   Lookback   : 288 readings (24 h)
+2026-10-20 17:40:34 | INFO     | src.features.feature_engineering |   Horizon    : 24 readings (2 h)
+2026-10-20 17:40:34 | INFO     | src.features.feature_engineering |   Threshold  : 180 mg/dL
+2026-10-20 19:59:47 | INFO     | __main__ | Loading data ...
+2026-10-20 19:59:47 | INFO     | src.features.feature_engineering | Building feature matrix ...
+2026-10-20 19:59:47 | INFO     | src.features.feature_engineering |   Lookback   : 288 readings (24 h)
+2026-10-20 19:59:47 | INFO     | src.features.feature_engineering |   Horizon    : 24 readings (2 h)
+2026-10-20 19:59:47 | INFO     | src.features.feature_engineering |   Threshold  : 180 mg/dL
+2026-10-20 20:04:23 | INFO     | __main__ | Loading data ...
+2026-10-20 20:04:23 | INFO     | src.features.feature_engineering | Building feature matrix ...
+2026-10-20 20:04:23 | INFO     | src.features.feature_engineering |   Lookback   : 288 readings (24 h)
+2026-10-20 20:04:23 | INFO     | src.features.feature_engineering |   Horizon    : 24 readings (2 h)
+2026-10-20 20:04:23 | INFO     | src.features.feature_engineering |   Threshold  : 180 mg/dL
+2026-10-20 20:04:40 | INFO     | src.features.feature_engineering | Feature matrix shape: (3389424, 75)
+2026-10-20 20:04:40 | INFO     | src.features.feature_engineering | Label distribution: 0=331961, 1=3057463 (90.2% positive)
+2026-10-20 20:04:41 | INFO     | __main__ | Split sizes: train=2376497, val=344768, test=668159
+2026-10-20 20:04:43 | INFO     | src.models.baseline | Training LightGBM (scale_pos_weight=0.11) ...
+2026-10-20 20:05:06 | INFO     | src.models.baseline | LightGBM val metrics: {'auroc': 0.9927, 'auprc': 0.9993, 'f1': 0.9673, 'precision': 0.9962, 'recall': 0.94}
+2026-10-20 20:05:08 | INFO     | __main__ | Test metrics: {'auroc': 0.9913, 'auprc': 0.9989, 'f1': 0.9606, 'precision': 0.9952, 'recall': 0.9284}
+2026-10-20 20:05:08 | INFO     | __main__ | Model saved -> C:\Users\P Hemanth Kumar\digital twin\models\baseline_lgbm.txt
+2026-10-20 20:05:08 | INFO     | __main__ | Baseline training complete in 45.4 s
+2026-10-21 14:36:12 | INFO     | __main__ | Loading data ...
+2026-10-21 14:36:12 | INFO     | src.features.feature_engineering | Building feature matrix ...
+2026-10-21 14:36:12 | INFO     | src.features.feature_engineering |   Lookback   : 288 readings (24 h)
+2026-10-21 14:36:12 | INFO     | src.features.feature_engineering |   Horizon    : 24 readings (2 h)
+2026-10-21 14:36:12 | INFO     | src.features.feature_engineering |   Threshold  : 180 mg/dL
+2026-10-21 14:36:26 | INFO     | src.features.feature_engineering | Feature matrix shape: (1655692, 75)
+2026-10-21 14:36:26 | INFO     | src.features.feature_engineering | Label distribution: 0=1074988, 1=580704 (35.1% positive)
+2026-10-21 14:36:26 | INFO     | __main__ | Split sizes: train=1165862, val=164859, test=324971
+2026-10-21 14:36:27 | INFO     | src.models.baseline | Training LightGBM (scale_pos_weight=1.80) ...
+2026-10-21 14:36:37 | INFO     | src.models.baseline | LightGBM val metrics: {'auroc': 0.9758, 'auprc': 0.9429, 'f1': 0.9027, 'precision': 0.8388, 'recall': 0.9772}
+2026-10-21 14:36:37 | INFO     | __main__ | Test metrics: {'auroc': 0.9798, 'auprc': 0.9479, 'f1': 0.908, 'precision': 0.8473, 'recall': 0.9781}
+2026-10-21 14:36:37 | INFO     | __main__ | Model saved -> C:\Users\P Hemanth Kumar\digital twin\models\baseline_lgbm.txt
+2026-10-21 14:36:38 | INFO     | __main__ | Baseline training complete in 25.8 s
+2026-10-21 21:41:42 | INFO     | __main__ | Loading data ...
+2026-10-21 21:41:43 | INFO     | src.features.feature_engineering | Building feature matrix ...
+2026-10-21 21:41:43 | INFO     | src.features.feature_engineering |   Lookback   : 288 readings (24 h)
+2026-10-21 21:41:43 | INFO     | src.features.feature_engineering |   Horizon    : 24 readings (2 h)
+2026-10-21 21:41:43 | INFO     | src.features.feature_engineering |   Threshold  : 180 mg/dL
+2026-10-21 21:42:06 | INFO     | src.features.feature_engineering | Feature matrix shape: (1513272, 75)
+2026-10-21 21:42:06 | INFO     | src.features.feature_engineering | Label distribution: 0=1136026, 1=377246 (24.9% positive)
+2026-10-21 21:42:07 | INFO     | __main__ | Split sizes: train=1055036, val=150848, test=307388
+2026-10-21 21:42:08 | INFO     | src.models.baseline | Training LightGBM (scale_pos_weight=3.08) ...
+2026-10-21 21:42:17 | INFO     | src.models.baseline | LightGBM val metrics: {'auroc': 0.9766, 'auprc': 0.9231, 'f1': 0.846, 'precision': 0.7666, 'recall': 0.9438}
+2026-10-21 21:42:18 | INFO     | __main__ | Test metrics: {'auroc': 0.9812, 'auprc': 0.9411, 'f1': 0.8746, 'precision': 0.7993, 'recall': 0.9656}
+2026-10-21 21:42:18 | INFO     | __main__ | Model saved -> C:\Users\P Hemanth Kumar\digital twin\models\baseline_lgbm.txt
+2026-10-21 21:42:19 | INFO     | __main__ | Baseline training complete in 35.3 s
+2026-10-21 21:44:23 | INFO     | __main__ | Loading data ...
+2026-10-21 21:44:24 | INFO     | src.features.feature_engineering | Building feature matrix ...
+2026-10-21 21:44:24 | INFO     | src.features.feature_engineering |   Lookback   : 288 readings (24 h)
+2026-10-21 21:44:24 | INFO     | src.features.feature_engineering |   Horizon    : 24 readings (2 h)
+2026-10-21 21:44:24 | INFO     | src.features.feature_engineering |   Threshold  : 180 mg/dL
+2026-10-21 21:44:49 | INFO     | src.features.feature_engineering | Feature matrix shape: (1504130, 75)
+2026-10-21 21:44:49 | INFO     | src.features.feature_engineering | Label distribution: 0=1139944, 1=364186 (24.2% positive)
+2026-10-21 21:44:50 | INFO     | __main__ | Split sizes: train=1047980, val=149098, test=307052
+2026-10-21 21:44:51 | INFO     | src.models.baseline | Training LightGBM (scale_pos_weight=3.23) ...
+2026-10-21 21:45:02 | INFO     | src.models.baseline | LightGBM val metrics: {'auroc': 0.9791, 'auprc': 0.9246, 'f1': 0.8544, 'precision': 0.7788, 'recall': 0.9462}
+2026-10-21 21:45:03 | INFO     | __main__ | Test metrics: {'auroc': 0.9833, 'auprc': 0.9451, 'f1': 0.8852, 'precision': 0.8148, 'recall': 0.9689}
+2026-10-21 21:45:03 | INFO     | __main__ | Model saved -> C:\Users\P Hemanth Kumar\digital twin\models\baseline_lgbm.txt
+2026-10-21 21:45:03 | INFO     | __main__ | Baseline training complete in 39.2 s

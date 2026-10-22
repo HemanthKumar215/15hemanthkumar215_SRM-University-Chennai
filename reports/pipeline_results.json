@@ -1,0 +1,152 @@
+{
+  "device": "cpu",
+  "split_counts": {
+    "synthetic": {
+      "train": 350,
+      "val": 50,
+      "test": 100
+    },
+    "real": {
+      "train": 27,
+      "val": 9,
+      "heldout_test": 9
+    }
+  },
+  "stage_a_synthetic_pretrain": {
+    "synthetic_test": {
+      "auroc": 0.8995,
+      "auprc": 0.5695,
+      "f1": 0.6411,
+      "precision": 0.5025,
+      "recall": 0.8855,
+      "n_samples": 1500,
+      "n_pos": 227
+    },
+    "real_val": {
+      "auroc": 0.9133,
+      "auprc": 0.4317,
+      "f1": 0.3226,
+      "precision": 0.1923,
+      "recall": 1.0,
+      "n_samples": 135,
+      "n_pos": 15
+    },
+    "real_heldout_test": {
+      "auroc": 0.9154,
+      "auprc": 0.2078,
+      "f1": 0.1075,
+      "precision": 0.0568,
+      "recall": 1.0,
+      "n_samples": 135,
+      "n_pos": 5
+    }
+  },
+  "stage_b_c_finetuned": {
+    "synthetic_test": {
+      "auroc": 0.8997,
+      "auprc": 0.5697,
+      "f1": 0.6607,
+      "precision": 0.5536,
+      "recall": 0.8194,
+      "n_samples": 1500,
+      "n_pos": 227
+    },
+    "real_val": {
+      "auroc": 0.9133,
+      "auprc": 0.4297,
+      "f1": 0.5172,
+      "precision": 0.3488,
+      "recall": 1.0,
+      "n_samples": 135,
+      "n_pos": 15
+    },
+    "real_heldout_test": {
+      "auroc": 0.9338,
+      "auprc": 0.2474,
+      "f1": 0.1961,
+      "precision": 0.1087,
+      "recall": 1.0,
+      "n_samples": 135,
+      "n_pos": 5
+    }
+  },
+  "subgroup_performance": {
+    "Cohort: Normal": {
+      "n_patients": 2,
+      "n_samples": 40,
+      "n_pos": 0,
+      "auroc": 0.5,
+      "auprc": 0.0,
+      "f1": 0.0,
+      "recall": 0.0
+    },
+    "Cohort: T2D": {
+      "n_patients": 6,
+      "n_samples": 120,
+      "n_pos": 5,
+      "auroc": 0.9635,
+      "auprc": 0.6976,
+      "f1": 0.1961,
+      "recall": 1.0
+    },
+    "Sex: Male": {
+      "n_patients": 5,
+      "n_samples": 100,
+      "n_pos": 0,
+      "auroc": 0.5,
+      "auprc": 0.0,
+      "f1": 0.0,
+      "recall": 0.0
+    },
+    "Sex: Female": {
+      "n_patients": 4,
+      "n_samples": 80,
+      "n_pos": 5,
+      "auroc": 0.7573,
+      "auprc": 0.1394,
+      "f1": 0.1667,
+      "recall": 1.0
+    },
+    "Age: <40": {
+      "n_patients": 2,
+      "n_samples": 40,
+      "n_pos": 4,
+      "auroc": 0.9653,
+      "auprc": 0.8125,
+      "f1": 0.32,
+      "recall": 1.0
+    },
+    "Age: 40-60": {
+      "n_patients": 3,
+      "n_samples": 60,
+      "n_pos": 0,
+      "auroc": 0.5,
+      "auprc": 0.0,
+      "f1": 0.0,
+      "recall": 0.0
+    },
+    "Age: >60": {
+      "n_patients": 4,
+      "n_samples": 80,
+      "n_pos": 1,
+      "auroc": 1.0,
+      "auprc": 1.0,
+      "f1": 0.1176,
+      "recall": 1.0
+    }
+  },
+  "sanity_audits": [
+    {
+      "model": "Fusion (Synthetic Test)",
+      "auroc": 0.8997,
+      "flagged": false,
+      "analysis": []
+    },
+    {
+      "model": "Fusion (Real Held-Out Test)",
+      "auroc": 0.9338,
+      "flagged": false,
+      "analysis": []
+    }
+  ]
+}

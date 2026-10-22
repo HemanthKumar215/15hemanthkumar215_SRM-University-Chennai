@@ -1,0 +1,11 @@
+patient_id,name,age,sex,ethnicity,bmi,hba1c,cohort,hba1c_history,fasting_glucose,total_cholesterol,ldl,hdl,triglycerides,systolic_bp,diastolic_bp,diagnosed_t2d,diagnosed_hypertension,diagnosed_dyslipidemia,medication_metformin,medication_sulfonylurea,medication_insulin,medication_dpp4i,medication_sglt2i,medication_antihypertensive,medication_statin,family_history_diabetes,family_history_cvd,genetic_risk_score,smoking_status,physical_activity_level
+P0000,Kavya Reddy,67,F,South Asian,35.1,8.8,T2D,9.2;9.0;8.7;8.6,175,239,101,45,249,117,79,1,1,1,0,1,1,0,1,1,0,0,0,0.523,never,sedentary
+P0001,Karthik Gupta,51,M,South Asian,23.6,5.4,normal,4.9;5.0;5.1;5.4,83,242,99,44,218,106,67,0,0,0,0,0,0,0,0,0,0,1,0,0.318,current,active
+P0002,Sunita Nair,56,F,South Asian,33.6,5.5,normal,5.5;5.3;5.3;5.3,72,211,123,64,92,140,82,0,1,1,0,0,0,0,0,1,0,1,1,0.574,never,moderate
+P0003,Aanya Sharma,49,F,South Asian,21.1,10.4,T2D,10.4;10.5;10.7;10.8,205,252,150,61,235,116,71,1,0,1,1,1,1,0,0,0,1,0,0,0.342,never,sedentary
+P0004,Karthik Reddy,47,M,South Asian,31.6,4.7,normal,5.1;4.8;4.8;4.1,65,237,189,47,144,134,79,0,0,0,0,0,0,0,0,0,0,1,1,0.257,never,active
+P0005,Kavya Reddy,40,F,South Asian,24.7,4.6,normal,4.2;4.3;4.6;4.7,65,224,75,60,106,105,67,0,0,1,0,0,0,0,0,0,0,0,1,0.151,former,sedentary
+P0006,Aanya Patel,55,F,Other,23.3,4.8,normal,5.1;4.9;4.6;4.3,65,168,129,48,172,145,80,0,0,1,0,0,0,0,0,0,1,0,1,0.297,former,sedentary
+P0007,Meera Das,39,F,South Asian,25.5,6.0,prediabetic,5.5;5.7;6.0;6.4,98,261,87,53,148,132,75,0,0,0,0,0,0,0,0,0,0,1,0,0.687,never,light
+P0008,Aditya Patel,57,M,Other,28.4,7.5,T2D,7.3;7.4;7.5;7.7,141,219,151,45,252,133,82,1,0,0,1,0,0,0,0,0,0,0,0,0.452,never,sedentary
+P0009,Amit Sharma,63,M,South Asian,25.2,10.3,T2D,10.3;10.4;10.4;10.5,219,186,92,29,180,166,106,1,1,0,1,1,1,0,0,1,0,0,0,0.475,never,moderate

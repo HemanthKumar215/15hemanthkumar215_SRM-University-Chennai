@@ -1,0 +1,30 @@
+# Generated data partitions (exclude large files, keep templates & samples)
+data/*.parquet
+data/cgm_chunks/
+data/cgm_partitions/
+data/synthetic_partitions/
+data/real/
+!data/templates/
+!data/sample/
+
+# Python & Environment
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/

@@ -1,0 +1,11 @@
+{
+  "best_trial_number": 1,
+  "best_val_auroc": 0.9086,
+  "best_params": {
+    "learning_rate": 0.002088008150108932,
+    "gru_hidden_dim": 64,
+    "gru_dropout": 0.1,
+    "fusion_dropout": 0.4,
+    "batch_size": 64
+  }
+}

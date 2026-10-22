@@ -1,0 +1,4 @@
+timestamp,run_id,stage,model_type,epochs,batch_size,lr,best_val_auroc,test_auroc,test_auprc,test_f1,notes
+2026-10-21T18:49:04.464862,stage_a_pretrain,Pretrain,fusion,2,,0.001,0.8814,0.887,0.5315,0.6159,Synthetic pretraining with modality dropout
+2026-10-21T18:52:17.161555,stage_a_pretrain,Pretrain,fusion,3,,0.001,0.8609,0.8995,0.5695,0.6411,Synthetic pretraining with modality dropout
+2026-10-21T18:53:07.279375,stage_b_finetune,Fine-tune,fusion,3,,0.0001,0.9133,0.9338,0.2474,0.1961,Fine-tuned on real cohort

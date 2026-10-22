@@ -1,0 +1,95 @@
+################################################################################
+# Digital Twin for Type 2 Diabetes – Central Configuration
+# All parameters for data generation, modeling, and the dashboard are here.
+################################################################################
+
+project:
+  name: "Digital Twin for Type 2 Diabetes"
+  team: "TeamAlpha"
+  college: "IIT Hyderabad"
+  seed: 42
+  description: >
+    A proof-of-concept digital twin that fuses simulated EHR and wearable
+    data to predict hyperglycemic spikes in Type 2 Diabetes patients.
+    All data is synthetic – no real patient data is used.
+
+data:
+  n_patients: 500
+  n_days: 30
+  cgm_interval_min: 5            # CGM reading every 5 minutes
+  output_dir: "data"
+  sample_dir: "data/sample"
+  sample_patients: 10             # patients kept in the sample/ folder
+  missing_rate: 0.03              # 3 % of CGM readings randomly missing
+  noise_std_glucose: 6.0          # mg/dL sensor noise σ
+  noise_std_hr: 4.0               # bpm HR noise σ
+
+demographics:
+  age_range: [25, 75]
+  bmi_range: [18.5, 42.0]
+  south_asian_fraction: 0.85      # majority South-Asian cohort
+  male_fraction: 0.55
+  t2d_prevalence: 0.60            # fraction with diagnosed T2D
+  hypertension_prevalence: 0.35
+  dyslipidemia_prevalence: 0.30
+
+meals:
+  # Indian meal schedule with carb loads (grams)
+  templates:
+    - name: "breakfast"
+      time_range: [7.0, 9.0]      # hours
+      carb_range: [30, 55]
+      options: ["idli-sambar", "dosa-chutney", "poha", "upma", "paratha"]
+    - name: "lunch"
+      time_range: [12.5, 14.0]
+      carb_range: [55, 85]
+      options: ["rice-dal-sabzi", "chapati-curry", "biryani", "curd-rice"]
+    - name: "evening_snack"
+      time_range: [16.0, 17.5]
+      carb_range: [10, 25]
+      options: ["chai-biscuit", "samosa", "vada-pav", "fruit"]
+    - name: "dinner"
+      time_range: [19.5, 21.5]
+      carb_range: [45, 75]
+      options: ["chapati-sabzi", "rice-rasam", "dosa", "khichdi"]
+    - name: "late_snack"
+      time_range: [22.0, 23.0]
+      carb_range: [8, 20]
+      options: ["milk", "fruit", "biscuit"]
+      probability: 0.30            # only 30 % of days
+
+model:
+  prediction_horizon_hours: 2
+  lookback_hours: 24
+  glucose_threshold: 180          # mg/dL for hyperglycemic spike
+  test_fraction: 0.20
+  val_fraction: 0.10
+  batch_size: 64
+  epochs: 30
+  learning_rate: 0.001
+  weight_decay: 1.0e-4
+
+  # GRU branch
+  gru_input_dim: 5                # glucose, hr, hrv, steps, sleep_flag
+  gru_hidden_dim: 64
+  gru_num_layers: 2
+  gru_dropout: 0.3
+
+  # Static MLP branch
+  static_input_dim: 22            # number of static features
+  static_hidden_dim: 64
+  static_embed_dim: 32
+
+  # Fusion head
+  fusion_hidden_dim: 64
+  fusion_dropout: 0.3
+  pos_weight: 2.5                 # BCE pos_weight for class imbalance
+
+risk_thresholds:
+  low: 0.25
+  medium: 0.55                    # probability above this → high risk
+
+paths:
+  models_dir: "models"
+  reports_dir: "reports"
+  logs_dir: "logs"

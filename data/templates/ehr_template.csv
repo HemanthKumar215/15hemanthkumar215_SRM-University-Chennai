@@ -1,0 +1,5 @@
+# Digital Twin EHR Profile Template
+# Required fields: age, sex, bmi, hba1c, fasting_glucose, cohort
+# Optional fields: systolic_bp, diastolic_bp, total_cholesterol, ldl, hdl, triglycerides, smoker, physical_activity_level
+patient_id,name,age,sex,bmi,hba1c,fasting_glucose,systolic_bp,diastolic_bp,total_cholesterol,ldl,hdl,triglycerides,smoker,physical_activity_level,cohort
+UPLOAD_001,Alex Morgan,52,M,28.4,7.2,142.0,130,82,205.0,122.0,46.0,165.0,0,moderate,T2D
