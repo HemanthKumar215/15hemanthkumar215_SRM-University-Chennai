@@ -21,6 +21,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import sys
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +34,12 @@ import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 import textwrap
+
+# `streamlit run app/streamlit_app.py` (e.g. on Streamlit Community Cloud) only puts
+# app/ on sys.path; add the repo root so the `app.` and `src.` packages import.
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 from app.ui_theme import (
     THEME_COLORS,
