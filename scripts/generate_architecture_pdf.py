@@ -195,6 +195,52 @@ HTML_SOURCE = """<!DOCTYPE html>
     font-size: 7.8pt;
     color: #64748B;
   }
+
+  /* ---------- Interactive walkthrough (screen only; added by the script below) ---------- */
+  .tour-ui { display: none; }
+  body.interactive .tour-ui { display: flex; }
+  body.interactive { padding-bottom: 96px; }
+  body.interactive .stage-col { transition: opacity .3s ease, filter .3s ease, transform .3s ease; }
+  body.interactive .stage-header { cursor: pointer; user-select: none; }
+  body.interactive .stage-header:hover { filter: brightness(1.25); }
+  body.interactive .arch-card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  body.interactive .arch-card:hover {
+    transform: translateY(-3px); border-color: rgba(56, 189, 248, 0.45);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  }
+  body.interactive.focusing .stage-col { opacity: .22; filter: grayscale(.7); }
+  body.interactive.focusing .stage-col.focus { opacity: 1; filter: none; transform: translateY(-4px); }
+  body.interactive .stage-col.focus .arch-card { border-color: rgba(255, 255, 255, 0.22); }
+  body.interactive.focusing .stage-col.done { opacity: .55; filter: grayscale(.3); }
+  @media (prefers-reduced-motion: reduce) {
+    body.interactive .stage-col, body.interactive .arch-card { transition: none; }
+  }
+
+  #tour {
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10;
+    width: min(980px, calc(100vw - 32px)); align-items: center; gap: 14px;
+    padding: 10px 12px 10px 18px; border-radius: 14px;
+    background: rgba(15, 23, 42, 0.94); border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px);
+  }
+  #tour-text { flex: 1; font-size: 10.5pt; line-height: 1.45; color: #CBD5E1; }
+  #tour-text b { color: #F8FAFC; }
+  #tour-step { font: 700 10pt 'JetBrains Mono', monospace; color: #64748B; white-space: nowrap; }
+  #tour button {
+    font: 700 10pt 'Plus Jakarta Sans', sans-serif; color: #E2E8F0; background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px; height: 36px; padding: 0 14px; cursor: pointer; white-space: nowrap;
+  }
+  #tour button:hover { background: rgba(255, 255, 255, 0.14); }
+  #tour button:focus-visible { outline: 2px solid #38BDF8; outline-offset: 1px; }
+  #tour button.primary { background: linear-gradient(135deg, #2DD4BF, #38BDF8); color: #0B1220; border: 0; }
+  #tour button:disabled { opacity: .35; cursor: default; }
+
+  @media print {
+    body.interactive { padding-bottom: 0; }
+    .tour-ui, body.interactive .tour-ui { display: none !important; }
+    body.interactive .stage-col { opacity: 1 !important; filter: none !important; transform: none !important; }
+    body.interactive .arch-card { transform: none !important; box-shadow: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -217,14 +263,14 @@ HTML_SOURCE = """<!DOCTYPE html>
     <div class="stage-header header-data">1. Ingestion Sources</div>
     
     <div class="arch-card">
-      <h3>Synthetic Cohort <span class="tag tag-blue">10,000 Pts</span></h3>
+      <h3>Synthetic Cohort <span class="tag tag-blue">500 Pts × 30 d</span></h3>
       <ul>
-        <li>Nathan et al. 2008 calibration ($r = 0.98$)</li>
+        <li>Nathan et al. 2008 calibration (r = 0.98)</li>
         <li>Gamma postprandial curves (30–60m peak)</li>
         <li>Full hypnograms & circadian HR / HRV</li>
         <li>Realistic steps (2,000–12,000/day)</li>
       </ul>
-      <div class="code-sub">src/data_generator/</div>
+      <div class="code-sub">src/data_gen/</div>
     </div>
 
     <div class="connector-arrow">▼</div>
@@ -234,7 +280,7 @@ HTML_SOURCE = """<!DOCTYPE html>
       <ul>
         <li>Abbott FreeStyle Libre (CSV export)</li>
         <li>Dexcom Clarity CGM format</li>
-        <li>Apple Health export XML/CSV</li>
+        <li>Apple Health CSV export</li>
         <li>Simulated AI-READI, CGMacros, Shanghai</li>
       </ul>
       <div class="code-sub">src/data_real/</div>
@@ -263,9 +309,9 @@ HTML_SOURCE = """<!DOCTYPE html>
       <ul>
         <li>Disjoint patient splits (Train/Val/Test)</li>
         <li>Temporal causality: 24h lookback strictly precedes 2h forecast horizon</li>
-        <li>Target: $G \ge 180$ within 2h given $G < 180$</li>
+        <li>Target: G ≥ 180 mg/dL within 2h given G &lt; 180</li>
       </ul>
-      <div class="code-sub">src/features/builder.py</div>
+      <div class="code-sub">src/features/dataset.py</div>
     </div>
   </div>
 
@@ -276,10 +322,10 @@ HTML_SOURCE = """<!DOCTYPE html>
     <div class="arch-card">
       <h3>Dynamic Sensor GRU <span class="tag tag-purple">Lookback</span></h3>
       <ul>
-        <li>Input: [288 timesteps × 6 channels]</li>
-        <li>Channels: CGM, HR, HRV, steps, sleep, carbs</li>
-        <li>2-Layer BiGRU (64 units, dropout=0.2)</li>
-        <li>Temporal self-attention pooling → 64-d</li>
+        <li>Input: [288 timesteps × 5 channels]</li>
+        <li>Channels: CGM, HR, HRV, steps, sleep stage</li>
+        <li>2-Layer GRU (64 units, dropout=0.3)</li>
+        <li>Final hidden state + LayerNorm → 64-d</li>
       </ul>
       <div class="code-sub">Sensor Branch: 0.9210 AUROC</div>
     </div>
@@ -289,9 +335,9 @@ HTML_SOURCE = """<!DOCTYPE html>
     <div class="arch-card">
       <h3>Static EHR MLP <span class="tag tag-purple">Demographics</span></h3>
       <ul>
-        <li>Input: 16 clinical EHR biomarkers</li>
-        <li>Age, Sex, BMI, HbA1c, Fasting Glu, BP, Meds</li>
-        <li>2-Layer MLP (16 → 64 → 32, LayerNorm)</li>
+        <li>Input: 27 encoded EHR features</li>
+        <li>Demographics, labs, diagnoses, meds, genetics</li>
+        <li>2-Layer MLP (27 → 64 → 32, LayerNorm)</li>
         <li>Cross-modal concatenation head (96-d)</li>
       </ul>
       <div class="code-sub">Fusion Model: 0.9008 AUROC</div>
@@ -310,7 +356,7 @@ HTML_SOURCE = """<!DOCTYPE html>
         <li>Active 2h spike probability & risk tier</li>
         <li>Status: Optimal, Watch, or Hyperglycemic</li>
       </ul>
-      <div class="code-sub">src/twin/state.py</div>
+      <div class="code-sub">src/twin/patient_twin.py</div>
     </div>
 
     <div class="connector-arrow">▼</div>
@@ -320,10 +366,10 @@ HTML_SOURCE = """<!DOCTYPE html>
       <ul>
         <li>Post-meal brisk walk (GLUT4 translocation)</li>
         <li>Carbohydrate challenge / snack omission</li>
-        <li>Metformin adherence & sleep hygiene</li>
-        <li>Instantaneous projected risk delta (↓ pts)</li>
+        <li>Sleep hygiene improvement</li>
+        <li>Projected risk change (↑/↓ pts)</li>
       </ul>
-      <div class="code-sub">src/twin/what_if.py</div>
+      <div class="code-sub">PatientTwin.what_if()</div>
     </div>
   </div>
 
@@ -345,7 +391,7 @@ HTML_SOURCE = """<!DOCTYPE html>
     <div class="connector-arrow">▼</div>
 
     <div class="arch-card">
-      <h3>Explainability & Audit <span class="tag tag-green">SHAP Attrib</span></h3>
+      <h3>Explainability & Audit <span class="tag tag-green">Occlusion</span></h3>
       <ul>
         <li>Signed horizontal feature impacts (% risk)</li>
         <li>Scientific Model Report & fair baselines</li>
@@ -363,6 +409,74 @@ HTML_SOURCE = """<!DOCTYPE html>
   <div>Benchmarks: LightGBM Fair 0.9699 | Fusion Model 0.9008 | Transfer Learning 0.9338 AUROC</div>
 </div>
 
+<div id="tour" class="tour-ui" role="region" aria-label="Architecture walkthrough">
+  <span id="tour-step"></span>
+  <div id="tour-text" aria-live="polite"></div>
+  <button id="tour-prev" aria-label="Previous stage">&larr;</button>
+  <button id="tour-next" class="primary">&#9654; Walk through</button>
+  <button id="tour-reset" aria-label="Show all stages">Show all</button>
+</div>
+
+<script>
+(function () {
+  var cols = Array.prototype.slice.call(document.querySelectorAll('.stage-col'));
+  if (!cols.length) return;
+  var body = document.body;
+  body.classList.add('interactive');
+
+  var captions = [
+    '<b>Two data streams in.</b> Static EHR profiles (demographics, labs, diagnoses, meds, genetic risk) and 5-minute wearable streams (CGM, heart rate, HRV, steps, sleep) come from the synthetic cohort or real-device exports.',
+    '<b>Validated in memory.</b> Uploads are format-detected (Libre, Dexcom, Apple Health), unit-checked, resampled to a 5-minute grid and split by patient with strict time ordering, so nothing leaks into the future.',
+    '<b>Fusion model.</b> A 2-layer GRU encodes the last 24 h of sensors (64-d) and an MLP encodes 27 EHR features (32-d); the concatenated 96-d vector predicts P(glucose &ge; 180 mg/dL within 2 h).',
+    '<b>The digital twin.</b> PatientTwin keeps a rolling sensor window, re-predicts as readings arrive, and runs what-if counterfactuals (walk, skip or add a meal, better sleep) to show the change in risk.',
+    '<b>The clinician acts.</b> The Streamlit dashboard shows the forecast cone, risk tier, feature explanations and what-if results so the doctor can choose an intervention before the spike happens.'
+  ];
+  var $ = function (id) { return document.getElementById(id); };
+  var step = -1;
+
+  function render() {
+    body.classList.toggle('focusing', step >= 0);
+    cols.forEach(function (c, i) {
+      c.classList.toggle('focus', i === step);
+      c.classList.toggle('done', step >= 0 && i < step);
+    });
+    if (step < 0) {
+      $('tour-step').textContent = '';
+      $('tour-text').innerHTML = 'Click a stage heading to focus it, or walk through the data flow step by step (&larr; / &rarr; keys).';
+      $('tour-next').innerHTML = '&#9654; Walk through';
+    } else {
+      $('tour-step').textContent = (step + 1) + ' / ' + cols.length;
+      $('tour-text').innerHTML = captions[step] || '';
+      $('tour-next').innerHTML = step === cols.length - 1 ? 'Finish' : 'Next &rarr;';
+    }
+    $('tour-prev').disabled = step <= 0;
+  }
+  function go(i) { step = Math.max(-1, Math.min(cols.length - 1, i)); render(); }
+
+  $('tour-next').onclick = function () { go(step === cols.length - 1 ? -1 : step + 1); };
+  $('tour-prev').onclick = function () { go(step - 1); };
+  $('tour-reset').onclick = function () { go(-1); };
+  cols.forEach(function (c, i) {
+    var h = c.querySelector('.stage-header');
+    h.setAttribute('role', 'button');
+    h.setAttribute('tabindex', '0');
+    h.title = 'Focus this stage';
+    var pick = function () { go(step === i ? -1 : i); };
+    h.addEventListener('click', pick);
+    h.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'ArrowRight') go(step + 1);
+    else if (e.key === 'ArrowLeft') go(step - 1);
+    else if (e.key === 'Escape') go(-1);
+    else return;
+    e.preventDefault();
+  });
+  render();
+})();
+</script>
+
 </body>
 </html>
 """
@@ -378,13 +492,15 @@ def main():
 
     # Generate high quality vector PDF via Edge/Playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path=EDGE_PATH, headless=True)
+        browser = p.chromium.launch(executable_path=EDGE_PATH if Path(EDGE_PATH).exists() else None,
+                                    headless=True)
         page = browser.new_page()
         page.set_content(HTML_SOURCE, wait_until="networkidle")
         page.pdf(
             path=str(pdf_path),
             format="A4",
             landscape=True,
+            scale=0.9,  # keeps the whole diagram on a single A4 page
             print_background=True,
             margin=dict(top="8mm", bottom="8mm", left="8mm", right="8mm"),
         )

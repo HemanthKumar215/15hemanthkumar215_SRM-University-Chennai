@@ -95,6 +95,6 @@ Real-world datasets rarely provide every sensor simultaneously. For example:
 - **AI-READI**: Full multimodal wearable and clinical observations.
 
 ### Modality Masking & Forward Imputation Strategy:
-1. **Modality Mask Matrix**: Each batch includes a binary mask vector $M \in \{0, 1\}^K$ indicating which channels are recorded for the given patient.
-2. **Missing Input Handling**: Unmeasured sensor channels are filled with population median values and marked as masked in the attention/GRU heads.
+1. **Gap Filling**: Short gaps in any channel are forward-filled from the last reading; channels a device never records (e.g. HRV in a CGM-only export) are filled with 0. Training (`src/features/dataset.py`) and live inference (`src/twin/patient_twin.py`) use exactly the same rule.
+2. **Missing Input Handling**: The model has no explicit mask input; instead it learns to tolerate absent channels through modality dropout (below), which zeroes HR, HRV, steps and sleep during pretraining.
 3. **Pretraining with Modality Dropout**: During Stage A pretraining on synthetic data, channels are randomly dropped with probability $p=0.3$ so the multi-branch network becomes resilient to missing modalities when evaluated on real-world cohorts.

@@ -81,6 +81,32 @@ class TestPatientTwin:
         assert twin.prediction_history == []
         assert twin.sensor_buffer == before
 
+    def test_explain_matches_occlusion(self, twin_parts) -> None:
+        """Attributions are real model deltas, not fixed numbers."""
+        twin = _make_twin(twin_parts)
+        for i in range(twin.lookback):
+            twin.ingest_reading(_reading(i, glucose_mg_dl=170.0 + i % 5))
+        attrs = twin.explain(top_k_static=4)
+        sensors = [a for a in attrs if a["group"] == "sensor"]
+        ehr = [a for a in attrs if a["group"] == "ehr"]
+        assert len(sensors) == len(_SENSOR_COLS)
+        assert len(ehr) == 4
+        assert [abs(a["impact"]) for a in attrs] == sorted((abs(a["impact"]) for a in attrs), reverse=True)
+
+        # Recompute the glucose attribution by hand
+        ts, st = twin._normalised_inputs(twin.sensor_buffer[-twin.lookback:])
+        occluded = ts.copy()
+        occluded[:, 0] = 0.0
+        base, occ = twin._probabilities(np.stack([ts, occluded]), np.stack([st, st]))
+        glucose = next(a for a in sensors if a["feature"].startswith("CGM glucose"))
+        assert glucose["impact"] == pytest.approx((base - occ) * 100, abs=0.01)
+        assert twin.prediction_history == []
+
+    def test_explain_needs_full_window(self, twin_parts) -> None:
+        twin = _make_twin(twin_parts)
+        twin.ingest_reading(_reading(0))
+        assert twin.explain() == []
+
     def test_what_if_unknown_scenario(self, twin_parts) -> None:
         twin = _make_twin(twin_parts)
         for i in range(twin.lookback):

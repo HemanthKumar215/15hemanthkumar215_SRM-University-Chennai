@@ -513,6 +513,7 @@ def main() -> None:
         try:
             if not twin_state.is_ready:
                 render_empty_state("Overview", tmpl_cgm_path, tmpl_ehr_path)
+            else:
                 # 1. Clinician Workflow Decision Panel (Collapsed by default)
                 with st.expander("🩺 Clinical Decision Workflow: How a Doctor Uses this Twin", expanded=False):
                     st.markdown("""
@@ -525,7 +526,7 @@ def main() -> None:
                         <div class="glass-card" style="border-left:3px solid var(--cyan);padding:12px;min-height:unset;">
                             <div style="font-size:0.72rem;font-weight:700;color:var(--cyan);letter-spacing:0.08em;text-transform:uppercase;">2 • See Why</div>
                             <div style="font-size:0.86rem;font-weight:700;margin-top:4px;">Explainability Drivers</div>
-                            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Inspect signed SHAP impact bars (carbohydrate load, sleep deficit, insulin resistance).</div>
+                            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Inspect live model attributions: which wearable signals and EHR features raise or lower risk.</div>
                         </div>
                         <div class="glass-card" style="border-left:3px solid var(--violet);padding:12px;min-height:unset;">
                             <div style="font-size:0.72rem;font-weight:700;color:var(--violet);letter-spacing:0.08em;text-transform:uppercase;">3 • Test Intervention</div>
@@ -659,7 +660,7 @@ def main() -> None:
                             {gauge_svg}
                         </div>
                         <div class="kpi-footer">
-                            <span>ML Ensemble Prediction</span>
+                            <span>GRU + MLP Fusion Model</span>
                             <span style="color:{gauge_color};font-weight:600;">{'>50% Spike' if prob_pct > 50 else ('Borderline' if prob_pct > 25 else 'Low Risk')}</span>
                         </div>
                     </div>
@@ -670,6 +671,7 @@ def main() -> None:
                     recent_24 = twin_state.clean_cgm.tail(288) if twin_state.clean_cgm is not None else pd.DataFrame()
                     tir_val = ((recent_24["glucose_mg_dl"] >= 70) & (recent_24["glucose_mg_dl"] <= 180)).mean() * 100.0 if not recent_24.empty else 75.0
                     tir_color = c["green"] if tir_val >= 70 else (c["amber"] if tir_val >= 50 else c["coral"])
+                    tir_status = "On Target" if tir_val >= 70 else ("Below Target" if tir_val >= 50 else "Poor Control")
                     tir_icon = svg_icon("activity", c["primary"], 14)
 
                     render_html(f"""
@@ -683,7 +685,7 @@ def main() -> None:
                         </div>
                         <div class="kpi-footer">
                             <span>70–180 mg/dL Corridor</span>
-                            <span style="color:{c['green']};font-weight:600;">Optimal</span>
+                            <span style="color:{tir_color};font-weight:600;">{tir_status}</span>
                         </div>
                     </div>
                     """)
@@ -1196,7 +1198,6 @@ def main() -> None:
                     elif scenario_choice == "add_meal":
                         kwargs["carbs"] = st.slider("Carbohydrate Density (Grams)", 20, 120, 65, step=5)
 
-                    st.checkbox("Simulate Strict Metformin Adherence", value=True)
                     run_sim = st.button("Run Simulation", type="primary", use_container_width=True)
 
                 with wi_col2:
@@ -1266,72 +1267,73 @@ def main() -> None:
             render_error_card("What-If Simulation Notice", "Unable to execute lifestyle simulation.", exc=e)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 4: EXPLAINABILITY (SHAP & Factor Attributions)
+    # TAB 4: EXPLAINABILITY (occlusion attributions from the fusion model)
     # ══════════════════════════════════════════════════════════════════════════
     with tab_explain:
         try:
             if not twin_state.is_ready:
                 render_empty_state("Explainability", tmpl_cgm_path, tmpl_ehr_path)
             else:
-                st.markdown(f"#### {svg_icon('sparkles', c['primary'], 20)} Multimodal Neural Feature Explainability (SHAP)", unsafe_allow_html=True)
-                st.caption("Identifies the leading static demographic risk factors and dynamic sensor biomarkers driving the 2-hour spike prediction.")
+                st.markdown(f"#### {svg_icon('sparkles', c['primary'], 20)} Multimodal Feature Attribution (Occlusion)", unsafe_allow_html=True)
+                st.caption(
+                    "Computed live from the fusion model: each wearable channel and EHR feature is replaced by the "
+                    "training-population average and the 2-hour spike probability is re-predicted. The bar shows how "
+                    "much this patient's actual value moves the risk."
+                )
+
+                attributions = twin_state.twin.explain() if twin_state.twin is not None else []
+                risk_drivers = [a for a in attributions if a["impact"] > 0.05]
+                protective = [a for a in attributions if a["impact"] < -0.05]
 
                 st.markdown("##### Clinical Summary")
-                if twin_state.prediction is not None and twin_state.prediction.risk_level in ("medium", "high"):
-                    render_html(f"""
-                    <div class='insight-card'>
-                        <strong>Why was {twin_state.name} flagged?</strong><br>
-                        The multimodal fusion network flagged elevated risk (<strong>{twin_state.prediction.probability*100:.1f}%</strong>) due to 
-                        the confluence of an elevated baseline HbA1c (<strong>{twin_state.hba1c:.1f}%</strong>), 
-                        high postprandial glucose momentum (<strong>+{twin_state.current_glu:.0f} mg/dL</strong>), 
-                        and recent carbohydrate ingestion, creating acute glycemic pressure over the next 2 hours.
-                    </div>
-                    """)
-                elif twin_state.prediction is not None:
-                    render_html(f"""
-                    <div class='insight-card'>
-                        <strong>Status Summary:</strong><br>
-                        {twin_state.name} is in a physiologically stable glycemic zone with low excursion risk (<strong>{twin_state.prediction.probability*100:.1f}%</strong>). 
-                        Sensor momentum is steady and basal fasting level matches demographic benchmarks.
-                    </div>
-                    """)
-                else:
+                if twin_state.prediction is None or not attributions:
                     st.info("Twin prediction is currently awaiting model inference.")
+                else:
+                    prob_pct = twin_state.prediction.probability * 100
+                    drivers_txt = ", ".join(
+                        f"<strong>{a['feature']}</strong> (+{a['impact']:.1f} pts)" for a in risk_drivers[:3]
+                    ) or "no single input raising risk above the population average"
+                    protect_txt = ", ".join(
+                        f"<strong>{a['feature']}</strong> ({a['impact']:.1f} pts)" for a in protective[:2]
+                    ) or "none"
+                    title = (f"Why was {twin_state.name} flagged?"
+                             if twin_state.prediction.risk_level in ("medium", "high") else "Status Summary")
+                    render_html(f"""
+                    <div class='insight-card'>
+                        <strong>{title}</strong><br>
+                        Predicted 2-hour spike probability is <strong>{prob_pct:.1f}%</strong>
+                        ({twin_state.prediction.risk_level} risk). Inputs pushing risk up: {drivers_txt}.
+                        Protective inputs: {protect_txt}.
+                    </div>
+                    """)
 
-                # Signed Horizontal SHAP Contribution Bars
-                st.markdown("##### Signed Feature Contributions (% Delta on Spike Risk)")
-                shap_factors = [
-                    {"feature": "Elevated Baseline HbA1c", "impact": +18.4 if twin_state.hba1c > 7.0 else -8.2},
-                    {"feature": "Recent Carbohydrate Ingestion", "impact": +14.2 if twin_state.recent_carbs > 40 else -6.1},
-                    {"feature": "Rising Glucose Trend Momentum", "impact": +11.8 if twin_state.current_glu > 140 else -7.4},
-                    {"feature": "High BMI & Insulin Resistance", "impact": +9.5 if (twin_state.profile is not None and float(twin_state.profile.get("bmi", 25.0)) > 28.0) else -4.2},
-                    {"feature": "Physical Activity / Steps Today", "impact": -10.5 if twin_state.current_steps > 5000 else +6.8},
-                    {"feature": "Metformin Medication Therapy", "impact": -8.0 if (twin_state.profile is not None and twin_state.profile.get("medication_metformin", 0)) else 0.0},
-                    {"feature": "Restful Sleep Architecture", "impact": -6.5 if twin_state.current_sleep > 7.0 else +9.1},
-                ]
-                shap_df = pd.DataFrame(shap_factors).sort_values("impact", ascending=True)
+                # Signed horizontal attribution bars
+                st.markdown("##### Signed Feature Contributions (percentage points of spike probability)")
+                if attributions:
+                    attr_df = pd.DataFrame(attributions).sort_values("impact", ascending=True)
 
-                fig_shap = go.Figure()
-                bar_colors = [c["green"] if val < 0 else c["coral"] for val in shap_df["impact"]]
-                fig_shap.add_trace(go.Bar(
-                    y=shap_df["feature"], x=shap_df["impact"],
-                    orientation="h", marker_color=bar_colors,
-                    hovertemplate="<b>%{y}</b>: %{x:+.1f}% risk<extra></extra>",
-                ))
-                fig_shap.add_vline(x=0, line_color=c["surface_card_border"], line_width=1.5)
-                fig_shap = apply_theme(fig_shap, theme_mode, height=280)
-                fig_shap.update_layout(
-                    xaxis=dict(title="% Impact on Spike Probability (Green = Protective, Coral = Risk Increasing)"),
-                    yaxis=dict(title=""),
-                )
-                st.plotly_chart(fig_shap, use_container_width=True)
+                    fig_attr = go.Figure()
+                    bar_colors = [c["green"] if val < 0 else c["coral"] for val in attr_df["impact"]]
+                    fig_attr.add_trace(go.Bar(
+                        y=attr_df["feature"], x=attr_df["impact"],
+                        orientation="h", marker_color=bar_colors,
+                        customdata=attr_df["group"].map({"sensor": "Wearable", "ehr": "EHR"}),
+                        hovertemplate="<b>%{y}</b> (%{customdata}): %{x:+.2f} pts<extra></extra>",
+                    ))
+                    fig_attr.add_vline(x=0, line_color=c["surface_card_border"], line_width=1.5)
+                    fig_attr = apply_theme(fig_attr, theme_mode, height=max(280, 30 * len(attr_df)))
+                    fig_attr.update_layout(
+                        xaxis=dict(title="Δ spike probability vs. population average (pts)"),
+                        yaxis=dict(title=""),
+                    )
+                    st.plotly_chart(fig_attr, use_container_width=True)
 
                 fi_path = PROJECT_ROOT / "reports" / "baseline_feature_importance.png"
                 if fi_path.exists():
                     with st.expander("Global Gini Feature Importance (LightGBM)", expanded=False):
                         st.image(str(fi_path), use_container_width=True)
         except Exception as e:
-            render_error_card("Explainability Notice", "Unable to render SHAP explainability breakdown.", exc=e)
+            render_error_card("Explainability Notice", "Unable to render the feature attribution breakdown.", exc=e)
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 5: MODEL REPORT (Judge-Facing Dossier – No Duplicated Patient Header)
@@ -1774,14 +1776,14 @@ def main() -> None:
         st.markdown("""
         - **Overview Tab**: Scan the 4 KPI cards and the **Twin Insight** banner for a rapid 10-second patient risk summary.
         - **Glucose & Vitals Tab**: High-resolution CGM trajectory with shaded target corridor (70–180 mg/dL), 2h forecast zone, AGP modal day, and multichannel vitals.
-        - **What-If Simulator Tab**: Simulate lifestyle interventions (e.g. 20-min post-meal brisk walk or carb challenge) and see real-time projected risk reductions.
-        - **Explainability Tab**: Plain-language summary and signed horizontal SHAP impact bars.
+        - **What-If Simulator Tab**: Simulate lifestyle interventions (e.g. 20-min post-meal brisk walk or carb challenge) and see how the model's projected spike risk changes.
+        - **Explainability Tab**: Plain-language summary and signed attribution bars computed live from the fusion model.
         - **Model Report Tab**: Judge-facing scientific validation, threshold optimization curve (Precision, Recall, F1), and fairness tables.
         - **Upload Data Tab**: Upload your own CSV exports (Abbott FreeStyle Libre, Dexcom, Apple Health) with 100% in-memory privacy.
         """)
 
     st.caption("GlycoTwin • Type 2 Diabetes Digital Twin • Happiest Health Challenge 2026 • MIT License")
-    st.caption("⚖️ **Clinical & Provenance Disclaimer**: Pretraining uses 10,000 synthetic patient-days calibrated to clinical literature. Evaluation on AI-READI, CGMacros, and Shanghai uses simulated real-format data for adapter verification. Research prototype; not an FDA-cleared diagnostic device.")
+    st.caption("⚖️ **Clinical & Provenance Disclaimer**: Pretraining uses 15,000 synthetic patient-days (500 patients × 30 days) calibrated to clinical literature. Evaluation on AI-READI, CGMacros, and Shanghai uses simulated real-format data for adapter verification. Research prototype; not an FDA-cleared diagnostic device.")
 
 
 if __name__ == "__main__":

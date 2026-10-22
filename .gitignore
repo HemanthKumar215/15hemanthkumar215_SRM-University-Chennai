@@ -28,3 +28,7 @@ env/
 .DS_Store
 Thumbs.db
 .ipynb_checkpoints/
+
+# Local scratch work and Claude Code session config
+scratch/
+.claude/

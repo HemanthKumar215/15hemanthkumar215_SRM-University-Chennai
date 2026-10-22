@@ -21,6 +21,19 @@ def test_demo_mode_loads():
     assert not at.exception, f"App raised an exception in demo mode: {at.exception}"
 
 
+def test_demo_mode_renders_tab_content():
+    """Overview and Explainability must show content once a twin is loaded, not just avoid errors."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+    text = " ".join(m.value for m in at.markdown)
+    # Overview: demographics section and clinical alerts (previously never rendered)
+    assert "Clinical Demographic & Laboratory Baseline" in text
+    # Explainability: summary generated from live model attributions
+    assert "Predicted 2-hour spike probability" in text
+    assert "Status Summary" in text or "flagged?" in text
+
+
 def test_upload_mode_no_files_loads_without_exception():
     """Verify upload mode with zero files does not crash and renders friendly empty state."""
     at = AppTest.from_file(APP_PATH, default_timeout=30)

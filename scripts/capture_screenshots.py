@@ -1,8 +1,12 @@
 """Automated screenshot capture script for GlycoTwin.
 
 Captures all tabs in Dark Theme and Clinical Light Theme at 1920x1080 and 1366x768.
+
+Usage (with the dashboard running):
+    python scripts/capture_screenshots.py [--url http://localhost:8501] [--tabs explainability whatif]
 """
 
+import argparse
 from pathlib import Path
 import time
 from playwright.sync_api import sync_playwright
@@ -27,38 +31,57 @@ VIEWPORTS = [
 ]
 
 THEMES = [
-    ("Dark Theme", "dark"),
+    ("Dark Midnight", "dark"),
     ("Clinical Light", "light"),
 ]
 
 
-def run_capture():
+def wait_for_app(page, timeout_ms: int = 120_000) -> None:
+    """Block until Streamlit has finished its script run and charts have drawn.
+
+    Screenshots taken earlier show an empty frame (the previous version of this
+    script captured every image before the app had rendered any content).
+    """
+    page.wait_for_selector('[data-testid="stTab"]', timeout=timeout_ms)
+    # The status widget ("Running...") is present while the script executes
+    page.wait_for_function(
+        """() => {
+            const s = document.querySelector('[data-testid="stStatusWidget"]');
+            return !s || !s.innerText.includes('Running');
+        }""",
+        timeout=timeout_ms,
+    )
+    time.sleep(2.5)  # Plotly animations / fonts
+
+
+def run_capture(url: str = "http://localhost:8501", only_tabs: list | None = None):
     print("Starting automated screenshot capture...")
+    tabs = [t for t in TABS if not only_tabs or t[1] in only_tabs]
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path=EDGE_PATH, headless=True)
+        browser = p.chromium.launch(executable_path=EDGE_PATH if Path(EDGE_PATH).exists() else None,
+                                    headless=True)
 
         for width, height, res_label in VIEWPORTS:
             for theme_label, theme_name in THEMES:
                 context = browser.new_context(viewport={"width": width, "height": height})
                 page = context.new_page()
-                page.goto("http://localhost:8501", wait_until="networkidle")
-                time.sleep(3)  # wait for initial render
+                page.goto(url, wait_until="networkidle")
+                wait_for_app(page)
 
                 # Switch theme in sidebar if needed
                 try:
                     theme_radio = page.locator(f'label:has-text("{theme_label}")')
                     if theme_radio.count() > 0:
                         theme_radio.first.click()
-                        time.sleep(2)
+                        time.sleep(1)
+                        wait_for_app(page)
                 except Exception as e:
                     print(f"Warning toggling theme {theme_label}: {e}")
 
-                for tab_label, tab_name in TABS:
+                for tab_label, tab_name in tabs:
                     try:
-                        tab_btn = page.locator(f'[data-baseweb="tab"]:has-text("{tab_label}")')
-                        if tab_btn.count() > 0:
-                            tab_btn.first.click()
-                            time.sleep(2)  # allow charts to render
+                        page.get_by_role("tab", name=tab_label).first.click()
+                        time.sleep(2.5)  # allow charts in the newly shown tab to render
 
                         filename = f"dashboard_{res_label}_{theme_name}_{tab_name}.png"
                         out_path = DOCS_IMG / filename
@@ -85,4 +108,9 @@ def run_capture():
 
 
 if __name__ == "__main__":
-    run_capture()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--url", default="http://localhost:8501", help="Running dashboard URL")
+    parser.add_argument("--tabs", nargs="*", choices=[t[1] for t in TABS],
+                        help="Only capture these tabs (default: all)")
+    args = parser.parse_args()
+    run_capture(args.url, args.tabs)

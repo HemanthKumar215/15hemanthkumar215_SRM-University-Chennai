@@ -221,6 +221,105 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
     font-size: 13pt;
     color: #E2E8F0;
   }
+
+  /* ---------- Interactive slideshow (screen only; added by the script below) ---------- */
+  body.deck { overflow: hidden; height: 100vh; }
+  body.deck #stage { position: fixed; inset: 0; background: #060B16; }
+  body.deck .cell {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .35s ease, visibility .35s;
+  }
+  body.deck .cell.active { opacity: 1; visibility: visible; }
+  body.deck .cell .slide {
+    flex: none; transform: scale(var(--s, 1)); transform-origin: center;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+  }
+  body.deck .cell.active .slide-body > * { animation: rise .5s ease both; }
+  body.deck .cell.active .slide-body > *:nth-child(2) { animation-delay: .08s; }
+  body.deck .cell.active .slide-body > *:nth-child(3) { animation-delay: .16s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    body.deck .cell, body.deck .cell.active .slide-body > * { transition: none; animation: none; }
+  }
+
+  /* Overview grid */
+  body.deck.overview #stage {
+    overflow-y: auto; display: grid; gap: 22px; padding: 70px 28px 28px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-content: start;
+    grid-auto-rows: var(--row-h, 170px); /* 16:9 of the column width, set by fit() */
+  }
+  body.deck.overview .cell {
+    position: relative; inset: auto; display: block; opacity: 1; visibility: visible;
+    overflow: hidden; border-radius: 10px; cursor: pointer;
+    outline: 2px solid rgba(255, 255, 255, .08); transition: outline-color .2s, transform .2s;
+  }
+  body.deck.overview .cell:hover { outline-color: #38BDF8; transform: translateY(-3px); }
+  body.deck.overview .cell.active { outline: 3px solid #2DD4BF; }
+  body.deck.overview .cell .slide {
+    position: absolute; top: 0; left: 0; transform: scale(var(--t, .2)); transform-origin: 0 0;
+    box-shadow: none; pointer-events: none;
+  }
+  body.deck.overview .cell .slide-body > * { animation: none; }
+  body.deck.overview .cell::after {
+    content: attr(data-n); position: absolute; left: 8px; bottom: 8px;
+    font: 700 12px 'JetBrains Mono', monospace; color: #F8FAFC;
+    background: rgba(11, 18, 32, .85); padding: 3px 8px; border-radius: 6px;
+  }
+
+  .deck-ui { display: none; }
+  body.deck .deck-ui { display: flex; }
+  #progress {
+    position: fixed; top: 0; left: 0; height: 4px; z-index: 20;
+    background: linear-gradient(90deg, #2DD4BF, #38BDF8, #8B5CF6); transition: width .35s ease;
+  }
+  #controls {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20;
+    align-items: center; gap: 6px; padding: 6px 8px; border-radius: 14px;
+    background: rgba(15, 23, 42, .88); border: 1px solid rgba(255, 255, 255, .12);
+    backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    transition: opacity .3s, transform .3s;
+  }
+  body.idle #controls { opacity: 0; transform: translate(-50%, 12px); pointer-events: none; }
+  body.idle { cursor: none; }
+  #controls button {
+    font: 600 14px 'Plus Jakarta Sans', sans-serif; color: #E2E8F0; background: transparent;
+    border: 0; border-radius: 9px; min-width: 38px; height: 38px; padding: 0 10px; cursor: pointer;
+  }
+  #controls button:hover { background: rgba(255, 255, 255, .1); }
+  #controls button:focus-visible { outline: 2px solid #38BDF8; outline-offset: 1px; }
+  #controls button:disabled { opacity: .35; cursor: default; background: transparent; }
+  #controls .sep { width: 1px; height: 22px; background: rgba(255, 255, 255, .14); margin: 0 4px; }
+  #counter, #timer { font: 700 14px 'JetBrains Mono', monospace; color: #94A3B8; padding: 0 8px; min-width: 70px; text-align: center; }
+  #counter b { color: #F8FAFC; }
+  #timer { cursor: pointer; border-radius: 9px; height: 38px; line-height: 38px; }
+  #timer.running { color: #2DD4BF; }
+  #help {
+    position: fixed; inset: 0; z-index: 30; align-items: center; justify-content: center;
+    background: rgba(2, 6, 23, .7); visibility: hidden; opacity: 0; transition: opacity .2s;
+  }
+  #help.open { visibility: visible; opacity: 1; }
+  #help .panel {
+    background: #0F172A; border: 1px solid rgba(255, 255, 255, .12); border-radius: 16px;
+    padding: 28px 34px; min-width: 360px; color: #CBD5E1; font-size: 15px;
+  }
+  #help h3 { color: #F8FAFC; margin-bottom: 14px; font-size: 18px; }
+  #help table { border-collapse: collapse; }
+  #help td { padding: 6px 14px 6px 0; }
+  #help kbd {
+    font: 700 12px 'JetBrains Mono', monospace; color: #F8FAFC; background: #1E293B;
+    border: 1px solid #334155; border-bottom-width: 3px; border-radius: 6px; padding: 2px 7px;
+  }
+
+  @media print {
+    body.deck { overflow: visible; height: auto; }
+    body.deck #stage { position: static; display: block; padding: 0; background: none; }
+    body.deck .cell { position: static; display: block; opacity: 1; visibility: visible; transition: none; }
+    body.deck .cell .slide { transform: none; box-shadow: none; }
+    body.deck .slide-body > * { animation: none !important; }
+    .deck-ui, body.deck .deck-ui { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -308,7 +407,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="deck-card" style="border-top:4px solid #8B5CF6;">
         <div class="hero-stat" style="color:#A78BFA;">What-If</div>
         <h3>Counterfactual Simulation</h3>
-        <p>Simulates skeletal muscle GLUT4 glucose uptake and dietary modifications in real-time, displaying immediate projected risk deltas (downward points).</p>
+        <p>Simulates skeletal muscle GLUT4 glucose uptake and dietary modifications in real-time, re-running the model to show the projected change in spike risk (up or down).</p>
       </div>
     </div>
   </div>
@@ -332,10 +431,10 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="deck-card" style="height:100%;">
         <h3>Neural Fusion Network Specifications</h3>
         <ul>
-          <li><b>Dynamic Sensor Lookback (BiGRU):</b> Processes 288 consecutive 5-minute timesteps (CGM, HR, HRV, steps, sleep hypnograms, meal carbs). Two bidirectional GRU layers (hidden_dim=64, dropout=0.2) + temporal self-attention pooling yields 64-dim dynamic embedding.</li>
-          <li><b>Static Demographic Branch (MLP):</b> Encodes 16 static clinical lab biomarkers (Age, Sex, BMI, HbA1c, Fasting Glucose, BP, Lipids, Metformin/Sulfonylurea therapy). 2-layer MLP (16 to 64 to 32, LayerNorm, ReLU) yields 32-dim static embedding.</li>
+          <li><b>Dynamic Sensor Lookback (GRU):</b> Processes 288 consecutive 5-minute timesteps across 5 channels (CGM, HR, HRV, steps, sleep stage). Two stacked GRU layers (hidden_dim=64, dropout=0.3); the final hidden state + LayerNorm yields a 64-dim dynamic embedding.</li>
+          <li><b>Static EHR Branch (MLP):</b> Encodes 27 static features (age, sex, BMI, HbA1c, fasting glucose, lipids, BP, diagnoses, 7 medication classes, family history, genetic risk score, smoking, activity). 2-layer MLP (27 to 64 to 32, LayerNorm, ReLU) yields a 32-dim static embedding.</li>
           <li><b>Cross-Modal Fusion Head:</b> Concatenation layer (96 dims) feeding a classification MLP with calibrated sigmoid activation. Predicts spike within 2h given baseline glucose below 180 mg/dL.</li>
-          <li><b>Modality Dropout:</b> Random sensor masking during training guarantees stability even when wearable signals (e.g. sleep/HR) are temporarily missing.</li>
+          <li><b>Modality Dropout:</b> Random masking of HR/HRV/steps/sleep channels (p=0.3) during pretraining guarantees stability even when wearable signals (e.g. sleep/HR) are temporarily missing.</li>
         </ul>
       </div>
     </div>
@@ -433,7 +532,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   <div class="slide-body">
     <div class="col-2" style="flex:1.4;">
-      <img src="file:///__IMG_DIR__/dashboard_1920_overview.png" class="slide-img" alt="Overview Dashboard">
+      <img src="img/dashboard_1920_overview.png" class="slide-img" alt="Overview Dashboard">
     </div>
     <div class="col-2">
       <div class="deck-card">
@@ -464,7 +563,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   <div class="slide-body">
     <div class="col-2" style="flex:1.4;">
-      <img src="file:///__IMG_DIR__/dashboard_1920_glucose_vitals.png" class="slide-img" alt="Glucose Chart">
+      <img src="img/dashboard_1920_glucose_vitals.png" class="slide-img" alt="Glucose Chart">
     </div>
     <div class="col-2">
       <div class="deck-card">
@@ -495,7 +594,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   <div class="slide-body">
     <div class="col-2" style="flex:1.4;">
-      <img src="file:///__IMG_DIR__/dashboard_1920_whatif.png" class="slide-img" alt="What-If Simulator">
+      <img src="img/dashboard_1920_whatif.png" class="slide-img" alt="What-If Simulator">
     </div>
     <div class="col-2">
       <div class="deck-card">
@@ -520,28 +619,28 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="slide-header">
     <div>
       <div class="category">Trust & Safety</div>
-      <h2>Multimodal Neural Feature Explainability (SHAP)</h2>
+      <h2>Multimodal Feature Attribution (Occlusion)</h2>
     </div>
     <div class="brand-badge">Interpretability</div>
   </div>
   <div class="slide-body">
     <div class="col-2" style="flex:1.4;">
-      <img src="file:///__IMG_DIR__/dashboard_1920_explainability.png" class="slide-img" alt="Explainability Tab">
+      <img src="img/dashboard_1920_explainability.png" class="slide-img" alt="Explainability Tab">
     </div>
     <div class="col-2">
       <div class="deck-card">
         <h3>Opening the Deep Learning Black Box</h3>
         <ul>
           <li><b>Plain-Language Clinical Rationale:</b> Plain-English synthesis of why a specific patient was flagged as elevated risk.</li>
-          <li><b>Signed Feature Impacts (% Delta):</b> Bidirectional horizontal contribution bars separating protective factors (green) from risk drivers (coral).</li>
-          <li><b>Multimodal Cross-Attributions:</b> Distinguishes between acute short-term drivers (rising sensor momentum, carb ingestion) and chronic baseline drivers (HbA1c, BMI).</li>
+          <li><b>Signed Feature Impacts (percentage points):</b> Each wearable channel and EHR feature is replaced by the population average and the model is re-run; bars show the change in spike probability, protective (green) vs risk-raising (coral).</li>
+          <li><b>Multimodal Cross-Attributions:</b> Separates acute drivers from the last 24 h of wearables (glucose trace, HR, HRV, steps, sleep) from chronic EHR drivers (HbA1c, BMI, medications).</li>
           <li><b>Doctor-Centric Clarity:</b> Enables the clinician to validate whether the model's reasoning matches metabolic pathophysiology.</li>
         </ul>
       </div>
     </div>
   </div>
   <div class="slide-footer">
-    <span>Integrated Gradients and SHAP feature attributions across static & dynamic modalities</span>
+    <span>Occlusion attributions computed live from the fusion model across static & dynamic modalities</span>
     <span>Slide 9 / 14</span>
   </div>
 </div>
@@ -557,7 +656,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   <div class="slide-body">
     <div class="col-2" style="flex:1.4;">
-      <img src="file:///__IMG_DIR__/dashboard_1920_upload.png" class="slide-img" alt="Upload Tab">
+      <img src="img/dashboard_1920_upload.png" class="slide-img" alt="Upload Tab">
     </div>
     <div class="col-2">
       <div class="deck-card">
@@ -588,7 +687,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   <div class="slide-body">
     <div class="col-2" style="flex:1.4;">
-      <img src="file:///__IMG_DIR__/dashboard_1920_light_overview.png" class="slide-img" alt="Light Theme Overview">
+      <img src="img/dashboard_1920_light_overview.png" class="slide-img" alt="Light Theme Overview">
     </div>
     <div class="col-2">
       <div class="deck-card">
@@ -627,7 +726,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="col-3">
       <div class="deck-card" style="border-top:4px solid #38BDF8;">
         <h3>2. Inspect Why</h3>
-        <p>Open SHAP attributions to examine whether acute postprandial carbs or baseline HbA1c is driving the impending excursion.</p>
+        <p>Open the live attributions to see whether recent wearable signals or baseline EHR factors such as HbA1c are driving the impending excursion.</p>
       </div>
     </div>
     <div class="col-3">
@@ -657,7 +756,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="deck-card" style="height:100%;">
         <h3>Transparent Data Provenance</h3>
         <ul>
-          <li><b>Pretraining (Synthetic):</b> 10,000 synthetic patient-days calibrated to clinical literature (Nathan et al. 2008 ADAG equations, gamma meal curves, circadian sleep/HR).</li>
+          <li><b>Pretraining (Synthetic):</b> 15,000 synthetic patient-days (500 patients × 30 days) calibrated to clinical literature (Nathan et al. 2008 ADAG equations, gamma meal curves, circadian sleep/HR).</li>
           <li><b>Adapter Validation:</b> Evaluated on simulated real-format files representing AI-READI, CGMacros, and Shanghai schemas. Honestly relabeled as "simulated real-format" to avoid false claims of physical patient trials.</li>
           <li><b>Zero Hallucinated Numbers:</b> Every dashboard metric and README table is synchronized strictly from <code>reports/metrics.json</code>.</li>
         </ul>
@@ -717,6 +816,173 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 
+<div id="progress" class="deck-ui"></div>
+<div id="controls" class="deck-ui" role="toolbar" aria-label="Slideshow controls">
+  <button id="btn-first" title="First slide (Home)" aria-label="First slide">&#x23EE;</button>
+  <button id="btn-prev" title="Previous (&larr;)" aria-label="Previous slide">&#x2190;</button>
+  <span id="counter" aria-live="polite"></span>
+  <button id="btn-next" title="Next (&rarr; / Space)" aria-label="Next slide">&#x2192;</button>
+  <span class="sep"></span>
+  <span id="timer" title="Presentation timer: click or T to start/pause, R to reset" role="button" tabindex="0">00:00</span>
+  <span class="sep"></span>
+  <button id="btn-grid" title="Slide overview (O)" aria-label="Slide overview">&#x25A6;</button>
+  <button id="btn-full" title="Fullscreen (F)" aria-label="Toggle fullscreen">&#x26F6;</button>
+  <button id="btn-help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+</div>
+<div id="help" class="deck-ui" role="dialog" aria-label="Keyboard shortcuts">
+  <div class="panel">
+    <h3>Keyboard shortcuts</h3>
+    <table>
+      <tr><td><kbd>&rarr;</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd></td><td>Next slide</td></tr>
+      <tr><td><kbd>&larr;</kbd> <kbd>PgUp</kbd></td><td>Previous slide</td></tr>
+      <tr><td><kbd>Home</kbd> / <kbd>End</kbd></td><td>First / last slide</td></tr>
+      <tr><td><kbd>1</kbd>&ndash;<kbd>9</kbd> then <kbd>Enter</kbd></td><td>Jump to slide number</td></tr>
+      <tr><td><kbd>O</kbd></td><td>Slide overview grid</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Fullscreen</td></tr>
+      <tr><td><kbd>T</kbd> / <kbd>R</kbd></td><td>Start-pause / reset timer</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close overview / help</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  var W = 1920, H = 1080;
+  var body = document.body;
+  var slides = Array.prototype.slice.call(document.querySelectorAll('body > .slide'));
+  if (!slides.length) return;
+
+  // Wrap every slide in a cell inside one stage so it can be scaled and shown alone.
+  var stage = document.createElement('div');
+  stage.id = 'stage';
+  body.insertBefore(stage, slides[0]);
+  var cells = slides.map(function (s, i) {
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.setAttribute('data-n', i + 1);
+    cell.appendChild(s);
+    stage.appendChild(cell);
+    cell.addEventListener('click', function () { if (body.classList.contains('overview')) { toggleOverview(false); go(i); } });
+    return cell;
+  });
+  body.classList.add('deck');
+
+  var $ = function (id) { return document.getElementById(id); };
+  var current = 0, typed = '';
+
+  function fit() {
+    var s = Math.min(window.innerWidth / W, window.innerHeight / H);
+    document.documentElement.style.setProperty('--s', s);
+    if (body.classList.contains('overview') && cells[0].clientWidth) {
+      var w = cells[0].clientWidth;
+      document.documentElement.style.setProperty('--t', w / W);
+      document.documentElement.style.setProperty('--row-h', (w * H / W) + 'px');
+    }
+  }
+
+  function go(i) {
+    current = Math.max(0, Math.min(cells.length - 1, i));
+    cells.forEach(function (c, k) { c.classList.toggle('active', k === current); });
+    $('counter').innerHTML = '<b>' + (current + 1) + '</b> / ' + cells.length;
+    $('progress').style.width = ((current + 1) / cells.length * 100) + '%';
+    $('btn-prev').disabled = $('btn-first').disabled = current === 0;
+    $('btn-next').disabled = current === cells.length - 1;
+    if (history.replaceState) history.replaceState(null, '', '#' + (current + 1));
+  }
+
+  function toggleOverview(on) {
+    body.classList.toggle('overview', on);
+    fit();
+    if (on) cells[current].scrollIntoView({ block: 'center' });
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  }
+
+  function toggleHelp(on) { $('help').classList.toggle('open', on); }
+
+  // Presenter timer (handy when recording the demo video)
+  var elapsed = 0, startedAt = null, tick = null;
+  function renderTimer() {
+    var t = elapsed + (startedAt ? Date.now() - startedAt : 0);
+    var sec = Math.floor(t / 1000);
+    $('timer').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+  }
+  function toggleTimer() {
+    if (startedAt) { elapsed += Date.now() - startedAt; startedAt = null; clearInterval(tick); }
+    else { startedAt = Date.now(); tick = setInterval(renderTimer, 500); }
+    $('timer').classList.toggle('running', !!startedAt);
+    renderTimer();
+  }
+  function resetTimer() { elapsed = 0; if (startedAt) startedAt = Date.now(); renderTimer(); }
+
+  $('btn-first').onclick = function () { go(0); };
+  $('btn-prev').onclick = function () { go(current - 1); };
+  $('btn-next').onclick = function () { go(current + 1); };
+  $('btn-grid').onclick = function () { toggleOverview(!body.classList.contains('overview')); };
+  $('btn-full').onclick = toggleFullscreen;
+  $('btn-help').onclick = function () { toggleHelp(true); };
+  $('help').onclick = function () { toggleHelp(false); };
+  $('timer').onclick = toggleTimer;
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    var k = e.key;
+    if ($('help').classList.contains('open')) { toggleHelp(false); e.preventDefault(); return; }
+    if (/^[0-9]$/.test(k)) { typed += k; return; }
+    if (k === 'Enter' && typed) { go(parseInt(typed, 10) - 1); typed = ''; e.preventDefault(); return; }
+    typed = '';
+    if (body.classList.contains('overview')) {
+      if (k === 'Escape' || k === 'o' || k === 'O' || k === 'Enter') { toggleOverview(false); e.preventDefault(); }
+      else if (k === 'ArrowRight' || k === 'ArrowDown') go(current + 1);
+      else if (k === 'ArrowLeft' || k === 'ArrowUp') go(current - 1);
+      return;
+    }
+    if (document.activeElement && document.activeElement.tagName === 'BUTTON' && (k === ' ' || k === 'Enter')) return;
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': go(current + 1); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace': go(current - 1); break;
+      case 'Home': go(0); break;
+      case 'End': go(cells.length - 1); break;
+      case 'o': case 'O': toggleOverview(true); break;
+      case 'f': case 'F': toggleFullscreen(); break;
+      case 't': case 'T': toggleTimer(); break;
+      case 'r': case 'R': resetTimer(); break;
+      case '?': toggleHelp(true); break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  // Touch swipe
+  var x0 = null;
+  stage.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+  stage.addEventListener('touchend', function (e) {
+    if (x0 === null || body.classList.contains('overview')) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(current + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+
+  // Hide controls and cursor after a few idle seconds
+  var idleTimer;
+  function wake() {
+    body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { if (!body.classList.contains('overview')) body.classList.add('idle'); }, 2500);
+  }
+  document.addEventListener('mousemove', wake);
+  document.addEventListener('keydown', wake);
+
+  window.addEventListener('resize', fit);
+  window.addEventListener('hashchange', function () { go(parseInt(location.hash.slice(1), 10) - 1 || 0); });
+  fit();
+  go(parseInt(location.hash.slice(1), 10) - 1 || 0);
+  wake();
+})();
+</script>
 </body>
 </html>
 """
@@ -726,15 +992,16 @@ def main():
     html_path = DOCS_DIR / "presentation.html"
     pdf_path = DOCS_DIR / "presentation.pdf"
 
-    rendered_html = SLIDES_HTML_TEMPLATE.replace("__IMG_DIR__", IMG_DIR.as_posix())
-    html_path.write_text(rendered_html, encoding="utf-8")
+    # Image paths are relative (img/...) so the HTML works from any clone or GitHub Pages
+    html_path.write_text(SLIDES_HTML_TEMPLATE, encoding="utf-8")
     print(f"Wrote presentation HTML source: {html_path}")
 
     # Generate high quality vector PDF via Edge/Playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path=EDGE_PATH, headless=True)
+        browser = p.chromium.launch(executable_path=EDGE_PATH if Path(EDGE_PATH).exists() else None,
+                                    headless=True)
         page = browser.new_page(viewport={"width": 1920, "height": 1080})
-        page.set_content(rendered_html, wait_until="networkidle")
+        page.goto(html_path.as_uri(), wait_until="networkidle")
         page.pdf(
             path=str(pdf_path),
             width="1920px",

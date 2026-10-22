@@ -34,6 +34,40 @@ logger = logging.getLogger(__name__)
 
 _SENSOR_COLS = ["glucose_mg_dl", "heart_rate_bpm", "hrv_ms", "steps", "sleep_stage"]
 
+_SENSOR_LABELS = {
+    "glucose_mg_dl": "CGM glucose trace (24 h)",
+    "heart_rate_bpm": "Heart rate (24 h)",
+    "hrv_ms": "Heart rate variability (24 h)",
+    "steps": "Step count (24 h)",
+    "sleep_stage": "Sleep stages (24 h)",
+}
+
+_STATIC_LABELS = {
+    "hba1c": "HbA1c",
+    "bmi": "BMI",
+    "ldl": "LDL cholesterol",
+    "hdl": "HDL cholesterol",
+    "systolic_bp": "Systolic BP",
+    "diastolic_bp": "Diastolic BP",
+    "diagnosed_t2d": "T2D diagnosis",
+    "medication_dpp4i": "DPP-4 inhibitor",
+    "medication_sglt2i": "SGLT2 inhibitor",
+    "sex_male": "Male sex",
+    "smoking_current": "Current smoker",
+    "smoking_former": "Former smoker",
+    "activity_encoded": "Physical activity level",
+}
+
+
+def _static_label(name: str) -> str:
+    """Human-readable label for an encoded static feature column."""
+    if name in _STATIC_LABELS:
+        return _STATIC_LABELS[name]
+    for prefix in ("medication_", "diagnosed_"):
+        if name.startswith(prefix):
+            name = name[len(prefix):]
+    return name.replace("_", " ").capitalize()
+
 
 @dataclass
 class PredictionResult:
@@ -113,6 +147,7 @@ class PatientTwin:
         df = pd.DataFrame([row])
         encoded = encode_static_features(df)
         cols = [c for c in encoded.columns if c != "patient_id"]
+        self.static_names = cols
         vec = encoded[cols].iloc[0].values.astype(np.float32)
         return vec
 
@@ -148,15 +183,10 @@ class PatientTwin:
             self.prediction_history.append(result)
         return result
 
-    def _predict_buffer(self, buffer: List[Dict[str, float]]) -> Optional[PredictionResult]:
-        """Run the model on ``buffer`` without recording prediction history."""
-        if len(buffer) < self.lookback:
-            logger.debug("Not enough data for prediction (%d < %d)",
-                         len(buffer), self.lookback)
-            return None
-
-        # Extract sensor window
-        window_data = buffer[-self.lookback:]
+    def _normalised_inputs(
+        self, window_data: List[Dict[str, float]]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Return the normalised (lookback, channels) sensor window and static vector."""
         ts_df = pd.DataFrame(
             [[r.get(c, np.nan) for c in _SENSOR_COLS] for r in window_data],
             columns=_SENSOR_COLS,
@@ -166,19 +196,75 @@ class PatientTwin:
         # so sparse uploads (e.g. CGM-only exports) match the training distribution.
         ts_array = ts_df.ffill().fillna(0).values.astype(np.float32)
 
-        # Normalise
         ts_norm = (ts_array - self.ts_mean) / self.ts_std
         static_norm = (self.static_vec - self.static_mean) / self.static_std
+        return ts_norm.astype(np.float32), static_norm.astype(np.float32)
 
-        # Convert to tensors
-        ts_tensor = torch.tensor(ts_norm, dtype=torch.float32).unsqueeze(0).to(self.device)
-        static_tensor = torch.tensor(static_norm, dtype=torch.float32).unsqueeze(0).to(self.device)
-
-        # Predict
+    def _probabilities(self, ts_norm: np.ndarray, static_norm: np.ndarray) -> np.ndarray:
+        """Spike probabilities for a batch of normalised inputs."""
+        ts_tensor = torch.tensor(ts_norm, dtype=torch.float32).to(self.device)
+        static_tensor = torch.tensor(static_norm, dtype=torch.float32).to(self.device)
         self.model.eval()
         with torch.no_grad():
-            logit = self.model(ts_tensor, static_tensor).item()
-        probability = 1 / (1 + np.exp(-logit))  # sigmoid
+            logits = self.model(ts_tensor, static_tensor).reshape(-1)
+        return torch.sigmoid(logits).cpu().numpy()
+
+    def explain(self, top_k_static: int = 6) -> List[Dict[str, Any]]:
+        """Occlusion attribution for the current prediction.
+
+        Each sensor channel (over the whole 24 h window) and each static EHR
+        feature is replaced in turn by its training-set mean (normalised value
+        0), and the model is re-run. ``impact`` is the drop in spike
+        probability, in percentage points, caused by that replacement:
+        positive means the patient's actual value *raises* risk relative to an
+        average patient, negative means it is protective.
+
+        Returns
+        -------
+        list of dict
+            Keys ``feature``, ``group`` ("sensor" or "ehr") and ``impact``,
+            sorted by absolute impact. All sensor channels are returned plus the
+            ``top_k_static`` most influential EHR features. Empty if there is
+            not enough data for a prediction.
+        """
+        if len(self.sensor_buffer) < self.lookback:
+            return []
+
+        ts_norm, static_norm = self._normalised_inputs(self.sensor_buffer[-self.lookback:])
+        n_ts, n_static = ts_norm.shape[1], static_norm.shape[0]
+
+        # Row 0 is the unmodified input; then one row per occluded input.
+        ts_batch = np.repeat(ts_norm[None], 1 + n_ts + n_static, axis=0)
+        static_batch = np.repeat(static_norm[None], 1 + n_ts + n_static, axis=0)
+        for j in range(n_ts):
+            ts_batch[1 + j, :, j] = 0.0
+        for j in range(n_static):
+            static_batch[1 + n_ts + j, j] = 0.0
+
+        probs = self._probabilities(ts_batch, static_batch)
+        deltas = (probs[0] - probs[1:]) * 100.0
+
+        sensor = [
+            {"feature": _SENSOR_LABELS.get(c, c), "group": "sensor", "impact": round(float(d), 2)}
+            for c, d in zip(_SENSOR_COLS, deltas[:n_ts])
+        ]
+        ehr = [
+            {"feature": _static_label(name), "group": "ehr", "impact": round(float(d), 2)}
+            for name, d in zip(self.static_names, deltas[n_ts:])
+        ]
+        ehr = sorted(ehr, key=lambda f: abs(f["impact"]), reverse=True)[:top_k_static]
+        return sorted(sensor + ehr, key=lambda f: abs(f["impact"]), reverse=True)
+
+    def _predict_buffer(self, buffer: List[Dict[str, float]]) -> Optional[PredictionResult]:
+        """Run the model on ``buffer`` without recording prediction history."""
+        if len(buffer) < self.lookback:
+            logger.debug("Not enough data for prediction (%d < %d)",
+                         len(buffer), self.lookback)
+            return None
+
+        window_data = buffer[-self.lookback:]
+        ts_norm, static_norm = self._normalised_inputs(window_data)
+        probability = float(self._probabilities(ts_norm[None], static_norm[None])[0])
 
         # Risk level
         if probability < self.risk_low:

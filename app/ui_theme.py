@@ -180,7 +180,7 @@ def get_custom_css(theme_mode: str = "dark") -> str:
         font-family: 'Inter', -apple-system, sans-serif !important;
         color: var(--text) !important;
     }}
-    h1, h2, h3, h4, .display-font {{
+    h1, h2, h3, h4, h5, h6, .display-font {{
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         letter-spacing: -0.02em;
         color: var(--text) !important;
@@ -271,8 +271,8 @@ def get_custom_css(theme_mode: str = "dark") -> str:
         animation: pulse-coral 2s infinite ease-in-out;
     }}
     .pill-hyper {{
-        background: rgba(225, 29, 72, 0.28);
-        color: #FDA4AF;
+        background: rgba(225, 29, 72, {'0.28' if is_dark else '0.12'});
+        color: {'#FDA4AF' if is_dark else '#9F1239'};
         border: 1px solid rgba(225, 29, 72, 0.60);
         box-shadow: 0 0 18px rgba(225, 29, 72, 0.40);
         animation: pulse-coral 1.5s infinite ease-in-out;
@@ -408,13 +408,21 @@ def get_custom_css(theme_mode: str = "dark") -> str:
         border-bottom: 1px solid {c["surface_card_border"]};
         padding-bottom: 2px;
     }}
-    .stTabs [data-baseweb="tab"] {{
+    /* Older Streamlit renders tabs as data-baseweb="tab", newer as data-testid="stTab" */
+    .stTabs [data-baseweb="tab"], .stTabs [data-testid="stTab"] {{
         padding: 8px 18px;
         font-weight: 600;
         font-size: 0.90rem;
-        color: {c["text_muted"]};
+        color: {c["text_muted"]} !important;
         border-radius: 8px 8px 0 0;
         transition: all 0.2s ease;
+    }}
+    .stTabs [data-testid="stTab"] p {{ color: inherit !important; }}
+    [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * {{
+        color: var(--muted) !important;
+    }}
+    [data-testid="stExpander"] summary, [data-testid="stExpander"] summary p {{
+        color: var(--text) !important;
     }}
     .stTabs [aria-selected="true"] {{
         background: {'rgba(45, 212, 191, 0.12)' if is_dark else 'rgba(13, 148, 136, 0.10)'} !important;
