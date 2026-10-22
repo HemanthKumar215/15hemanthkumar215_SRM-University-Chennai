@@ -269,7 +269,7 @@ Uploaded patient data is governed by zero-retention ephemeral processing:
 ### 1. Prerequisites & Installation
 Ensure Python 3.10+ is installed:
 ```bash
-git clone https://github.com/15hemanthkumar215/15hemanthkumar215_SRM-University-Chennai.git
+git clone https://github.com/HemanthKumar215/15hemanthkumar215_SRM-University-Chennai.git
 cd 15hemanthkumar215_SRM-University-Chennai
 
 # Install production dependencies
