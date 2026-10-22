@@ -19,8 +19,9 @@
 | Field | Submission Details |
 |---|---|
 | **Project Title** | GlycoTwin: A Multimodal Digital Twin for 2-Hour Hyperglycemic Spike Prediction in Type 2 Diabetes |
-| **Team Name** | TeamAlpha *(TODO: Confirm final hackathon team registration name)* |
-| **College / Institution** | IIT Hyderabad *(TODO: Confirm institutional affiliation)* |
+| **Team Name** | 15hemanthkumar215 |
+| **College / Institution** | SRM University, Chennai |
+| **Submission Folder / Repository** | `15hemanthkumar215_SRM-University-Chennai` (Team Name_College Name) |
 | **Team Members** | P Hemanth Kumar *(TODO: Add co-author/team member names if applicable)* |
 | **Demo Video** | `TODO: Add 20+ minute demo video link (YouTube / Google Drive)` |
 | **Architecture Diagram (PDF)** | [docs/architecture.pdf](./docs/architecture.pdf) • [Interactive HTML walkthrough](./docs/architecture.html) |
@@ -268,8 +269,8 @@ Uploaded patient data is governed by zero-retention ephemeral processing:
 ### 1. Prerequisites & Installation
 Ensure Python 3.10+ is installed:
 ```bash
-git clone https://github.com/TeamAlpha/glycotwin.git
-cd glycotwin
+git clone https://github.com/15hemanthkumar215/15hemanthkumar215_SRM-University-Chennai.git
+cd 15hemanthkumar215_SRM-University-Chennai
 
 # Install production dependencies
 pip install -r requirements.txt

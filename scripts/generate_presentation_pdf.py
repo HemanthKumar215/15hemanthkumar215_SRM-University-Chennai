@@ -336,6 +336,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
       <span class="meta-chip">Clinical What-If Simulator</span>
       <span class="meta-chip">MIT Open Source</span>
     </div>
+    <div style="margin-top:34px;font-size:15pt;color:#94A3B8;">Team <b style="color:#E2E8F0;">15hemanthkumar215</b> &bull; SRM University, Chennai</div>
   </div>
 </div>
 

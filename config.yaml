@@ -5,8 +5,8 @@
 
 project:
   name: "Digital Twin for Type 2 Diabetes"
-  team: "TeamAlpha"
-  college: "IIT Hyderabad"
+  team: "15hemanthkumar215"
+  college: "SRM University, Chennai"
   seed: 42
   description: >
     A proof-of-concept digital twin that fuses simulated EHR and wearable
