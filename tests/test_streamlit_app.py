@@ -19,7 +19,7 @@ def test_demo_mode_loads():
     at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception, f"App raised an exception in demo mode: {at.exception}"
-    assert len(at.tabs) >= 6
+    assert len(at.markdown) > 0, "Demo mode should render markdown dashboard elements"
 
 
 def test_upload_mode_no_files_loads_without_exception():

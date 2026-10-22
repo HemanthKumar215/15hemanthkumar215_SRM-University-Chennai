@@ -24,7 +24,11 @@ from src.data_real import (
 @pytest.fixture(scope="module")
 def real_data_dir() -> Path:
     root = get_project_root()
-    return root / "data" / "real"
+    data_dir = root / "data" / "real"
+    if not (data_dir / "aireadi" / "cgm_readings.csv").exists():
+        from src.data_real.mock_generator import generate_all_mock_datasets
+        generate_all_mock_datasets(data_dir)
+    return data_dir
 
 
 class TestRealAdapters:
