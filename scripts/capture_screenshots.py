@@ -4,6 +4,7 @@ Captures all tabs in Dark Theme and Clinical Light Theme at 1920x1080 and 1366x7
 
 Usage (with the dashboard running):
     python scripts/capture_screenshots.py [--url http://localhost:8501] [--tabs explainability whatif]
+                                          [--patient "Aditya Patel"]
 """
 
 import argparse
@@ -54,7 +55,18 @@ def wait_for_app(page, timeout_ms: int = 120_000) -> None:
     time.sleep(2.5)  # Plotly animations / fonts
 
 
-def run_capture(url: str = "http://localhost:8501", only_tabs: list | None = None):
+def select_patient(page, name: str) -> None:
+    """Pick a demo patient by (partial) name in the sidebar selector."""
+    box = page.locator('[data-testid="stSelectbox"]').filter(has_text="Select Patient Twin")
+    box.locator("input").first.click()
+    page.keyboard.type(name)
+    page.keyboard.press("Enter")
+    time.sleep(1)
+    wait_for_app(page)
+
+
+def run_capture(url: str = "http://localhost:8501", only_tabs: list | None = None,
+                patient: str | None = None):
     print("Starting automated screenshot capture...")
     tabs = [t for t in TABS if not only_tabs or t[1] in only_tabs]
     with sync_playwright() as p:
@@ -67,6 +79,8 @@ def run_capture(url: str = "http://localhost:8501", only_tabs: list | None = Non
                 page = context.new_page()
                 page.goto(url, wait_until="networkidle")
                 wait_for_app(page)
+                if patient:
+                    select_patient(page, patient)
 
                 # Switch theme in sidebar if needed
                 try:
@@ -112,5 +126,6 @@ if __name__ == "__main__":
     parser.add_argument("--url", default="http://localhost:8501", help="Running dashboard URL")
     parser.add_argument("--tabs", nargs="*", choices=[t[1] for t in TABS],
                         help="Only capture these tabs (default: all)")
+    parser.add_argument("--patient", help="Demo patient to show, by name (default: the app's first patient)")
     args = parser.parse_args()
-    run_capture(args.url, args.tabs)
+    run_capture(args.url, args.tabs, args.patient)

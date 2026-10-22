@@ -107,6 +107,46 @@ class TestPatientTwin:
         twin.ingest_reading(_reading(0))
         assert twin.explain() == []
 
+    def test_risk_timeline_is_causal_and_labels_outcomes(self, twin_parts) -> None:
+        twin = _make_twin(twin_parts)
+        n = twin.lookback + 60
+        ts = pd.date_range("2026-01-01", periods=n, freq="5min")
+        glucose = np.full(n, 120.0)
+        glucose[twin.lookback + 30] = 200.0          # one spike, 2.5 h after the first forecast
+        df = pd.DataFrame({"timestamp": ts, "glucose_mg_dl": glucose, "heart_rate_bpm": 75.0,
+                           "hrv_ms": 50.0, "steps": 0.0, "sleep_stage": 0.0})
+        tl = twin.risk_timeline(df, step=12, horizon=24)
+
+        assert list(tl["timestamp"]) == list(ts[twin.lookback - 1::12])
+        # Each forecast equals a live prediction on the same history (no look-ahead)
+        for _, row in tl.iterrows():
+            live = _make_twin(twin_parts)
+            live.ingest_batch(df[df["timestamp"] <= row["timestamp"]].tail(twin.lookback))
+            assert live.predict().probability == pytest.approx(row["probability"], abs=1e-4)
+        spike_ts = ts[twin.lookback + 30]
+        assert tl.loc[0, "spike_followed"] == False  # noqa: E712  spike is 2.5 h away
+        assert tl.loc[1, "spike_followed"] == True  # noqa: E712
+        assert tl.loc[1, "spike_time"] == spike_ts
+        assert pd.isna(tl.iloc[-1]["spike_followed"])  # fewer than 2 h of future data
+
+    def test_compare_scenarios_ranks_by_delta(self, twin_parts) -> None:
+        twin = _make_twin(twin_parts)
+        for i in range(twin.lookback):
+            twin.ingest_reading(_reading(i))
+        ranked = twin.compare_scenarios()
+        assert {r["scenario"] for r in ranked} == {"add_exercise", "skip_meal", "improve_sleep", "add_meal"}
+        assert [r["delta_prob"] for r in ranked] == sorted(r["delta_prob"] for r in ranked)
+        assert twin.prediction_history == []
+
+    def test_what_if_returns_model_inputs(self, twin_parts) -> None:
+        twin = _make_twin(twin_parts)
+        for i in range(twin.lookback):
+            twin.ingest_reading(_reading(i))
+        out = twin.what_if("skip_meal", show_hours=3)
+        assert len(out["original_inputs"]) == len(out["modified_inputs"]) == 36
+        assert (out["modified_inputs"]["glucose_mg_dl"].tail(24)
+                < out["original_inputs"]["glucose_mg_dl"].tail(24)).all()
+
     def test_what_if_unknown_scenario(self, twin_parts) -> None:
         twin = _make_twin(twin_parts)
         for i in range(twin.lookback):

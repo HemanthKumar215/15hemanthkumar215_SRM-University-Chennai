@@ -59,6 +59,12 @@ _STATIC_LABELS = {
 }
 
 
+def _readings_frame(readings: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Sensor readings (plus timestamp when present) as a DataFrame."""
+    cols = [c for c in ["timestamp"] + _SENSOR_COLS if any(c in r for r in readings)]
+    return pd.DataFrame([{c: r.get(c, np.nan) for c in cols} for r in readings], columns=cols)
+
+
 def _static_label(name: str) -> str:
     """Human-readable label for an encoded static feature column."""
     if name in _STATIC_LABELS:
@@ -266,13 +272,7 @@ class PatientTwin:
         ts_norm, static_norm = self._normalised_inputs(window_data)
         probability = float(self._probabilities(ts_norm[None], static_norm[None])[0])
 
-        # Risk level
-        if probability < self.risk_low:
-            risk_level = "low"
-        elif probability < self.risk_high:
-            risk_level = "medium"
-        else:
-            risk_level = "high"
+        risk_level = self._risk_level(probability)
 
         # Current glucose
         current_glucose = window_data[-1].get("glucose_mg_dl", 0.0)
@@ -310,8 +310,12 @@ class PatientTwin:
         -------
         dict
             Keys: ``original_prob``, ``modified_prob``, ``original_risk``,
-            ``modified_risk``, ``delta_prob``, ``scenario``.
+            ``modified_risk``, ``delta_prob``, ``scenario``, plus
+            ``original_inputs`` / ``modified_inputs``: DataFrames of the last
+            ``show_hours`` (kwarg, default 6) of sensor readings before and
+            after the scenario was applied, i.e. exactly what the model saw.
         """
+        show_hours = kwargs.pop("show_hours", 6)
         # Original prediction (simulations never touch prediction_history)
         original = self._predict_buffer(self.sensor_buffer)
         if original is None:
@@ -383,7 +387,116 @@ class PatientTwin:
                 (modified_result.probability - original.probability), 4
             ) if modified_result else None,
             "kwargs": kwargs,
+            "original_inputs": _readings_frame(self.sensor_buffer[-show_hours * 12:]),
+            "modified_inputs": _readings_frame(modified_buffer[-show_hours * 12:]),
         }
+
+    def compare_scenarios(
+        self, scenarios: Optional[Dict[str, Dict[str, Any]]] = None
+    ) -> List[Dict[str, Any]]:
+        """Run several what-if scenarios and rank them by change in spike risk.
+
+        Parameters
+        ----------
+        scenarios : dict, optional
+            ``{scenario_name: kwargs}``. Defaults to every supported scenario
+            with typical settings.
+
+        Returns
+        -------
+        list of dict
+            Keys ``scenario``, ``kwargs``, ``original_prob``, ``modified_prob``
+            and ``delta_prob``, sorted from the largest risk reduction to the
+            largest increase. Empty if there is not enough data.
+        """
+        if scenarios is None:
+            scenarios = {
+                "add_exercise": {"duration_min": 30, "intensity": 0.7},
+                "skip_meal": {},
+                "improve_sleep": {},
+                "add_meal": {"carbs": 65},
+            }
+        rows = []
+        for name, kw in scenarios.items():
+            res = self.what_if(name, **dict(kw))
+            if "error" in res or res["delta_prob"] is None:
+                continue
+            rows.append({k: res[k] for k in
+                         ("scenario", "kwargs", "original_prob", "modified_prob", "delta_prob")})
+        return sorted(rows, key=lambda r: r["delta_prob"])
+
+    def risk_timeline(
+        self, readings: pd.DataFrame, step: int = 12, horizon: int = 24
+    ) -> pd.DataFrame:
+        """Replay the twin over historical data: one 2-hour forecast per ``step`` readings.
+
+        For every forecast time ``t`` the model sees only the ``lookback``
+        readings up to and including ``t`` (no future data), exactly as it
+        would have in real time. The forecast is then compared with what
+        actually happened in the following ``horizon`` readings, using the
+        training label definition (glucose at ``t`` below the threshold and
+        any reading in the horizon at or above it).
+
+        Parameters
+        ----------
+        readings : pd.DataFrame
+            Time-ordered sensor readings with a ``timestamp`` column.
+        step : int
+            Readings between forecasts (12 = hourly at 5-minute sampling).
+        horizon : int
+            Readings in the prediction horizon (24 = 2 hours).
+
+        Returns
+        -------
+        pd.DataFrame
+            Columns ``timestamp``, ``glucose_mg_dl``, ``probability``,
+            ``risk_level``, ``eligible`` (glucose below threshold at ``t``, so a
+            spike forecast is meaningful), ``spike_followed`` (bool, or NaN
+            when fewer than ``horizon`` future readings exist) and
+            ``spike_time`` (first time glucose reached the threshold).
+        """
+        cols = ["timestamp", "glucose_mg_dl", "probability", "risk_level",
+                "eligible", "spike_followed", "spike_time"]
+        df = readings.sort_values("timestamp").reset_index(drop=True)
+        records = df.to_dict("records")
+        ends = list(range(self.lookback, len(records) + 1, step))
+        if not ends:
+            return pd.DataFrame(columns=cols)
+
+        ts_batch, static_batch = [], []
+        for end in ends:
+            ts_norm, static_norm = self._normalised_inputs(records[end - self.lookback:end])
+            ts_batch.append(ts_norm)
+            static_batch.append(static_norm)
+        probs = np.concatenate([
+            self._probabilities(np.stack(ts_batch[i:i + 64]), np.stack(static_batch[i:i + 64]))
+            for i in range(0, len(ends), 64)
+        ])
+
+        glucose = pd.to_numeric(df["glucose_mg_dl"], errors="coerce").to_numpy()
+        rows = []
+        for end, p in zip(ends, probs):
+            now = end - 1
+            future = glucose[end:end + horizon]
+            hits = np.flatnonzero(future >= self.threshold)
+            complete = len(future) == horizon
+            rows.append({
+                "timestamp": df.at[now, "timestamp"],
+                "glucose_mg_dl": glucose[now],
+                "probability": float(p),
+                "risk_level": self._risk_level(float(p)),
+                "eligible": bool(glucose[now] < self.threshold),
+                "spike_followed": bool(len(hits)) if (complete or len(hits)) else np.nan,
+                "spike_time": df.at[end + hits[0], "timestamp"] if len(hits) else pd.NaT,
+            })
+        return pd.DataFrame(rows, columns=cols)
+
+    def _risk_level(self, probability: float) -> str:
+        if probability < self.risk_low:
+            return "low"
+        if probability < self.risk_high:
+            return "medium"
+        return "high"
 
     def get_recent_glucose(self, n: int = 288) -> List[float]:
         """Return the last ``n`` glucose readings."""

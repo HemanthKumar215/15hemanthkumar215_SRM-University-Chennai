@@ -32,6 +32,10 @@ def test_demo_mode_renders_tab_content():
     # Explainability: summary generated from live model attributions
     assert "Predicted 2-hour spike probability" in text
     assert "Status Summary" in text or "flagged?" in text
+    # Twin Replay and What-If comparison render without falling back to an error card
+    assert "Twin Replay" in text
+    assert "Which change helps this patient most?" in text
+    assert "Unable to" not in text, "a tab rendered its error card"
 
 
 def test_upload_mode_no_files_loads_without_exception():

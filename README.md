@@ -102,12 +102,12 @@ The clinician dashboard is built with Streamlit, supporting both **Deep Navy Dar
 *Rapid 10-second patient triage displaying active status, one-line verdict, actionable directives, and core KPI cards.*
 ![Overview Tab](./docs/img/dashboard_1920_overview.png)
 
-### 2. Continuous Glucose Monitor (CGM) & 2-Hour Predictive Cone
-*High-resolution spline trajectory, shaded 70–180 mg/dL target corridor, 2h forecast uncertainty cone with spike probability, Now marker, Ambulatory Glucose Profile (AGP), and multichannel vitals.*
+### 2. Continuous Glucose Monitor (CGM), Twin Replay & 2-Hour Forecast
+*Glucose trace with the 70–180 mg/dL target corridor, a Now marker and the next-2-hour window shaded by the model's spike probability. **Twin Replay** re-runs the twin every hour of the observation window using only the data available at that moment, overlays each forecast on what glucose actually did, and lets you scrub through time ("at 20:55 the twin said 94%; glucose crossed 180 an hour later"), with a scorecard of spikes flagged in advance. Plus the Ambulatory Glucose Profile (AGP) and multichannel vitals.*
 ![Glucose & Vitals Tab](./docs/img/dashboard_1920_glucose_vitals.png)
 
 ### 3. Counterfactual What-If Lifestyle Simulator
-*Interactive lifestyle scenario modeling (brisk walking, meal carb modulation, sleep hygiene) with the model's projected change in spike risk (↑ or ↓ points) and full-width comparative trajectories.*
+*Pick a scenario (brisk walk, skip a snack, better sleep, or a high-carb meal challenge) and adjust it with sliders; the fusion model's projected change in spike risk updates live. A ranking shows which lifestyle intervention helps this patient most, and a before/after chart shows exactly how the scenario changed the glucose and vitals the model received.*
 ![What-If Simulator Tab](./docs/img/dashboard_1920_whatif.png)
 
 ### 4. Multimodal Feature Attribution (Occlusion)

@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit as st
 import streamlit.components.v1 as components
 import textwrap
@@ -139,6 +140,128 @@ class TwinState:
     pill_class: str
     pill_label: str
     error_msg: Optional[str] = None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Twin Replay: hourly 2-hour forecasts over the observation window
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _fmt_delta(td: pd.Timedelta) -> str:
+    mins = int(round(td.total_seconds() / 60))
+    return f"{mins // 60} h {mins % 60:02d} min" if mins >= 60 else f"{mins} min"
+
+
+def render_twin_replay(twin_state: "TwinState", theme_mode: str, c: Dict[str, str]) -> None:
+    """Replay the twin hour by hour and compare each 2-hour forecast with what happened."""
+    st.markdown("##### ⏪ Twin Replay: Hourly 2-Hour Forecasts vs. What Actually Happened")
+    st.caption(
+        "Every hour, the twin is re-run using only the 24 h of data available at that moment, exactly as "
+        "it would run live. Drag the slider to step through time and see whether a spike followed."
+    )
+
+    timeline = twin_state.twin.risk_timeline(twin_state.cgm_df)
+    if timeline.empty:
+        st.info("Twin Replay needs more than 24 hours of readings. Widen the observation window in the sidebar.")
+        return
+
+    eligible = timeline["eligible"].to_numpy()
+    if not eligible.any():
+        st.info(
+            "This patient's glucose stayed above 180 mg/dL for the whole window, so there were no below-180 moments "
+            "to forecast a new spike from. Choose another patient (e.g. sort by *Lowest Glycemic Risk*) or a "
+            "different observation window to see the replay in action."
+        )
+
+    # Start on the most recent hour that is a real, checkable forecast
+    checkable = np.flatnonzero(eligible & timeline["spike_followed"].notna().to_numpy())
+    default_idx = int(checkable[-1]) if len(checkable) else (
+        int(np.flatnonzero(eligible)[-1]) if eligible.any() else len(timeline) - 1)
+    labels = [t.strftime("%a %d %b %H:%M") for t in timeline["timestamp"]]
+    idx = st.select_slider("Replay time", options=list(range(len(timeline))),
+                           value=default_idx, format_func=lambda i: labels[i],
+                           key=f"replay_{twin_state.patient_id}")
+    sel = timeline.iloc[idx]
+    risk_color = {"low": c["green"], "medium": c["amber"], "high": c["coral"]}
+
+    cgm = twin_state.clean_cgm
+    fig = go.Figure()
+    fig.add_hrect(y0=70, y1=180, fillcolor="rgba(52, 211, 153, 0.07)", line_width=0)
+    fig.add_vrect(x0=sel["timestamp"], x1=sel["timestamp"] + pd.Timedelta(hours=2),
+                  fillcolor=risk_color[sel["risk_level"]], opacity=0.10, line_width=0,
+                  annotation_text="2 h forecast window", annotation_position="top left",
+                  annotation_font=dict(size=10, color=c["text_muted"]))
+    fig.add_trace(go.Bar(
+        x=timeline["timestamp"], y=timeline["probability"] * 100, yaxis="y2", name="Forecast spike risk",
+        marker_color=[risk_color[r] if e else c["text_muted"]
+                      for r, e in zip(timeline["risk_level"], timeline["eligible"])],
+        opacity=0.32, width=40 * 60 * 1000,
+        customdata=np.where(timeline["eligible"], "", " (already above 180: not a forecast case)"),
+        hovertemplate="<b>%{x|%d %b %H:%M}</b><br>Forecast risk: %{y:.0f}%%{customdata}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=cgm["timestamp"], y=cgm["glucose_mg_dl"], mode="lines", name="Measured glucose",
+        line=dict(color=c["primary"], width=1.8),
+        hovertemplate="%{x|%d %b %H:%M}: %{y:.0f} mg/dL<extra></extra>",
+    ))
+    onsets = timeline.dropna(subset=["spike_time"]).drop_duplicates("spike_time")
+    onsets = onsets[onsets["eligible"]]
+    if not onsets.empty:
+        onset_glu = cgm.set_index("timestamp")["glucose_mg_dl"].reindex(onsets["spike_time"])
+        fig.add_trace(go.Scatter(
+            x=onsets["spike_time"], y=onset_glu.values, mode="markers", name="Spike onset (≥ 180)",
+            marker=dict(symbol="x", size=9, color=c["coral"], line=dict(width=2)),
+            hovertemplate="Spike onset %{x|%d %b %H:%M}<extra></extra>",
+        ))
+    fig.add_vline(x=sel["timestamp"], line_color=c["text_primary"], line_width=1.5)
+    fig.add_hline(y=180, line_dash="dot", line_color=c["coral"])
+    fig = apply_theme(fig, theme_mode, height=380)
+    fig.update_layout(
+        yaxis=dict(title="Glucose (mg/dL)", range=[40, max(260.0, float(cgm["glucose_mg_dl"].max()) + 20)]),
+        yaxis2=dict(title="Forecast risk (%)", overlaying="y", side="right", range=[0, 100],
+                    tickmode="array", tickvals=[0, 25, 50, 75, 100], ticksuffix="%",
+                    showgrid=False, color=c["text_muted"]),
+        legend=dict(orientation="h", y=1.12, x=0),
+        bargap=0,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Card for the selected forecast
+    p = sel["probability"] * 100
+    if not sel["eligible"]:
+        outcome = (f"Glucose was already {sel['glucose_mg_dl']:.0f} mg/dL (above 180), so this hour is not a "
+                   "spike-forecast case; the model is trained for patients currently below 180.")
+    elif pd.notna(sel["spike_time"]):
+        outcome = (f"Glucose reached 180 mg/dL at <b>{sel['spike_time']:%H:%M}</b>, "
+                   f"<b>{_fmt_delta(sel['spike_time'] - sel['timestamp'])}</b> later.")
+    elif sel["spike_followed"] == False:  # noqa: E712 (NaN means not yet known)
+        outcome = "Glucose stayed below 180 mg/dL for the next 2 hours."
+    else:
+        outcome = "Outcome not known yet: less than 2 hours of data after this time."
+    render_html(f"""
+    <div class="glass-card" style="border-left:4px solid {risk_color[sel['risk_level']]};margin-bottom:10px;">
+        <div class="kpi-label">At {sel['timestamp']:%a %d %b, %H:%M} (glucose {sel['glucose_mg_dl']:.0f} mg/dL)</div>
+        <div style="font-size:1.05rem;margin:6px 0;color:var(--text);">
+            The twin forecast a <b style="color:{risk_color[sel['risk_level']]};">{p:.0f}% ({sel['risk_level']})</b>
+            chance of a spike within 2 hours.
+        </div>
+        <div style="font-size:0.9rem;color:var(--muted);">{outcome}</div>
+    </div>
+    """)
+
+    # Summary over the window (eligible forecasts with a known outcome only)
+    known = timeline[timeline["eligible"] & timeline["spike_followed"].notna()]
+    if not known.empty:
+        flagged = known["risk_level"].isin(["medium", "high"])
+        spiked = known["spike_followed"].astype(bool)
+        n_spike, n_calm = int(spiked.sum()), int((~spiked).sum())
+        caught = int((flagged & spiked).sum())
+        quiet = int((~flagged & ~spiked).sum())
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Forecasts with known outcome", f"{len(known)}")
+        m2.metric("Spikes flagged in advance", f"{caught} / {n_spike}" if n_spike else "no spikes",
+                  help="Hours where a spike followed within 2 h and the twin had said medium or high risk.")
+        m3.metric("Calm hours correctly low", f"{quiet} / {n_calm}" if n_calm else "n/a",
+                  help="Hours with no spike in the next 2 h where the twin said low risk.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -940,7 +1063,7 @@ def main() -> None:
                         hovertemplate="<b>Physical Exercise Session</b><br>%{x|%d-%b %H:%M}<extra></extra>",
                     ))
 
-                # 2h Forecast Region with Uncertainty Cone
+                # 2h forecast window, shaded by the model's spike probability
                 if twin_state.last_ts is not None and twin_state.prediction is not None:
                     fig_cgm.add_trace(go.Scatter(
                         x=[twin_state.last_ts], y=[twin_state.current_glu],
@@ -963,39 +1086,15 @@ def main() -> None:
                         xanchor="right",
                     )
 
-                    future_ts = pd.date_range(twin_state.last_ts, twin_state.last_ts + pd.Timedelta(hours=2), periods=25)
-                    risk_mult = twin_state.prediction.probability
-                    delta_y = (28.0 if risk_mult > 0.5 else 6.0) * risk_mult
-                    t_step = np.linspace(0, 1, 25)
-                    forecast_mean = twin_state.current_glu + delta_y * np.sin(t_step * np.pi / 2)
-                    forecast_upper = forecast_mean + 16.0 * t_step
-                    forecast_lower = forecast_mean - 10.0 * t_step
-
-                    fig_cgm.add_trace(go.Scatter(
-                        x=list(future_ts) + list(future_ts[::-1]),
-                        y=list(forecast_upper) + list(forecast_lower[::-1]),
-                        fill="toself",
-                        fillcolor="rgba(139, 92, 246, 0.15)",
-                        line=dict(color="rgba(255,255,255,0)"),
-                        hoverinfo="skip",
-                        showlegend=True,
-                        name="2h Forecast (95% CI)",
-                    ))
-
+                    # The model outputs a spike probability, not a glucose trajectory, so the
+                    # forecast is shown as the 2 h window shaded by that probability.
                     f_color = c["coral"] if twin_state.prediction.risk_level == "high" else (c["amber"] if twin_state.prediction.risk_level == "medium" else c["green"])
-                    fig_cgm.add_trace(go.Scatter(
-                        x=future_ts, y=forecast_mean, mode="lines",
-                        name=f"Forecast ({twin_state.prediction.risk_level.title()} Risk)",
-                        line=dict(color=f_color, width=2.4, dash="dot", shape="spline"),
-                        hovertemplate="<b>Predicted Trajectory</b><br>%{x|%H:%M}: ~%{y:.0f} mg/dL<extra></extra>",
-                    ))
-
                     prob_pct_lbl = twin_state.prediction.probability * 100.0
                     fig_cgm.add_vrect(
                         x0=twin_state.last_ts, x1=twin_state.last_ts + pd.Timedelta(hours=2),
-                        fillcolor="rgba(251, 113, 133, 0.06)",
-                        line_width=1, line_dash="dash", line_color="rgba(251, 113, 133, 0.4)",
-                        annotation_text=f"2h Forecast Region ({prob_pct_lbl:.0f}% Spike Prob)",
+                        fillcolor=f_color, opacity=0.06 + 0.22 * twin_state.prediction.probability,
+                        line_width=1, line_dash="dash", line_color=f_color,
+                        annotation_text=f"Next 2 h: {prob_pct_lbl:.0f}% spike probability ({twin_state.prediction.risk_level})",
                         annotation_position="top left",
                         annotation_font=dict(size=10, color=f_color),
                     )
@@ -1006,6 +1105,9 @@ def main() -> None:
                     showlegend=True,
                 )
                 st.plotly_chart(fig_cgm, use_container_width=True)
+
+                if twin_state.twin is not None:
+                    render_twin_replay(twin_state, theme_mode, c)
 
                 # Ambulatory Glucose Profile (AGP) & Day x Hour Pattern
                 st.markdown("##### Ambulatory Glucose Profile (AGP) & Day × Hour Density Pattern")
@@ -1190,29 +1292,53 @@ def main() -> None:
                 st.markdown(f"#### {svg_icon('sliders', c['primary'], 20)} Counterfactual What-If Lifestyle Simulator", unsafe_allow_html=True)
                 st.caption("Interactively simulate how behavioral interventions modulate postprandial glucose excursions and spike probability.")
 
+                SCENARIO_LABELS = {
+                    "add_exercise": "🚶 Post-meal brisk walk",
+                    "skip_meal": "🍽️ Skip the most recent snack",
+                    "improve_sleep": "😴 Better sleep",
+                    "add_meal": "🍚 High-carbohydrate meal (challenge)",
+                }
+
                 wi_col1, wi_col2 = st.columns([1, 1])
 
                 with wi_col1:
                     st.markdown("##### ⚙️ Configure Counterfactual Intervention")
-                    scenario_choice = st.selectbox(
+                    scenario_choice = st.radio(
                         "Intervention Type",
-                        ["add_exercise", "skip_meal", "add_meal", "improve_sleep"],
-                        format_func=lambda x: {
-                            "add_exercise": "Post-Meal Brisk Walk (GLUT4 Translocation)",
-                            "skip_meal": "Omit Late-Night Carbohydrate Snack",
-                            "add_meal": "High-Carbohydrate Dietary Challenge",
-                            "improve_sleep": "Sleep Hygiene Enhancement (7.5h Rest)",
-                        }.get(x, x),
+                        list(SCENARIO_LABELS),
+                        format_func=SCENARIO_LABELS.get,
+                        horizontal=True,
+                        key="whatif_scenario",
                     )
 
                     kwargs: Dict[str, Any] = {}
                     if scenario_choice == "add_exercise":
                         kwargs["duration_min"] = st.slider("Brisk Walk Duration (Minutes)", 10, 60, 30, step=5)
                         kwargs["intensity"] = st.slider("Exercise Intensity (0.3=Gentle, 1.0=Vigorous)", 0.3, 1.0, 0.7, step=0.1)
+                        change_txt = (
+                            f"Over the last {kwargs['duration_min']} min: glucose lowered by up to "
+                            f"{25 * kwargs['intensity']:.0f} mg/dL in total, heart rate +{30 * kwargs['intensity']:.0f} bpm "
+                            f"and +{80 * kwargs['intensity']:.0f} steps per 5 minutes."
+                        )
                     elif scenario_choice == "add_meal":
-                        kwargs["carbs"] = st.slider("Carbohydrate Density (Grams)", 20, 120, 65, step=5)
+                        kwargs["carbs"] = st.slider("Carbohydrates (grams)", 20, 120, 65, step=5)
+                        change_txt = (f"Over the last hour: a {kwargs['carbs']} g carbohydrate glucose rise "
+                                      f"(peak +{kwargs['carbs'] * 0.5:.0f} mg/dL).")
+                    elif scenario_choice == "skip_meal":
+                        change_txt = "Over the last 2 hours: glucose lowered by 20 mg/dL (not below 80), as if the snack was skipped."
+                    else:
+                        change_txt = "During recorded sleep: glucose 5 mg/dL lower and HRV 10 ms higher."
 
-                    run_sim = st.button("Run Simulation", type="primary", use_container_width=True)
+                    st.caption("⚡ Results update live as you change the scenario or sliders.")
+                    render_html(f"""
+                    <div class="glass-card" style="margin-top:6px;">
+                        <div class="kpi-label">What the simulation changes in the twin's inputs</div>
+                        <div style="font-size:0.88rem;color:var(--text);margin-top:6px;line-height:1.45;">{change_txt}</div>
+                        <div style="font-size:0.75rem;color:var(--muted);margin-top:8px;line-height:1.4;">
+                            These are simplified physiological adjustments. The risk change is the fusion model's own response to them.
+                        </div>
+                    </div>
+                    """)
 
                 with wi_col2:
                     st.markdown("##### 🎯 Projected Spike Risk Delta")
@@ -1234,48 +1360,86 @@ def main() -> None:
                             </span>
                         </div>
                         <div style="font-size:0.80rem;color:var(--muted);line-height:1.4;">
-                            Baseline: <b>{twin_state.prediction.risk_level.upper() if twin_state.prediction is not None else 'UNKNOWN'}</b> → Intervention: <b>{'LOW' if mod_p < 25 else ('MEDIUM' if mod_p < 50 else 'HIGH')}</b>
-                        </div>
-                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text);border-top:1px solid var(--border);padding-top:6px;">
-                            💡 <b>Physiological Mechanism:</b> Counterfactual adjustment simulates skeletal muscle GLUT4 glucose uptake and basal insulin sensitivity shift.
+                            Baseline: <b>{(sim_res['original_risk'] or 'unknown').upper()}</b> → Intervention: <b>{(sim_res['modified_risk'] or 'unknown').upper()}</b>
                         </div>
                     </div>
                     """)
 
-                # Full-Width Comparative Glycemic Trajectory Chart
-                st.markdown("##### 📈 4-Hour Counterfactual Glycemic Trajectory: Baseline vs Intervention Scenario")
-                t_hours = pd.date_range("2026-01-31 00:00", periods=48, freq="5min")
-                t_x = np.linspace(0, 4, 48)
+                    # Rank every intervention for this patient
+                    st.markdown("##### 🏆 Which change helps this patient most?")
+                    # Only real lifestyle interventions are ranked; the carbohydrate meal is a
+                    # stress-test scenario and must never be presented as a recommendation.
+                    ranked = twin_state.twin.compare_scenarios({
+                        "add_exercise": {"duration_min": 30, "intensity": 0.7},
+                        "skip_meal": {},
+                        "improve_sleep": {},
+                    })
+                    if ranked:
+                        rank_df = pd.DataFrame(ranked)
+                        rank_df["label"] = rank_df["scenario"].map(SCENARIO_LABELS)
+                        rank_df["delta_pts"] = rank_df["delta_prob"] * 100.0
+                        rank_df = rank_df.iloc[::-1]  # best at the top of a horizontal bar chart
+                        fig_rank = go.Figure(go.Bar(
+                            y=rank_df["label"], x=rank_df["delta_pts"], orientation="h",
+                            marker_color=[c["green"] if v < 0 else c["coral"] for v in rank_df["delta_pts"]],
+                            marker_line=dict(width=[3 if s == scenario_choice else 0 for s in rank_df["scenario"]],
+                                             color=c["text_primary"]),
+                            text=[f"{v:+.1f}" for v in rank_df["delta_pts"]], textposition="outside",
+                            cliponaxis=False,
+                            hovertemplate="<b>%{y}</b><br>%{x:+.2f} pts of spike risk<extra></extra>",
+                        ))
+                        fig_rank.add_vline(x=0, line_color=c["surface_card_border"], line_width=1.5)
+                        fig_rank = apply_theme(fig_rank, theme_mode, height=230)
+                        span = max(2.0, float(rank_df["delta_pts"].abs().max()) * 1.6)
+                        fig_rank.update_layout(
+                            xaxis=dict(title="Δ 2 h spike risk (pts)", range=[-span, span]),
+                            yaxis=dict(title=""), margin=dict(l=10, r=30, t=10, b=40),
+                        )
+                        st.plotly_chart(fig_rank, use_container_width=True)
+                        best = ranked[0]
+                        if best["delta_prob"] < 0:
+                            st.caption(f"Largest predicted reduction: **{SCENARIO_LABELS[best['scenario']]}** "
+                                       f"({best['delta_prob'] * 100:+.1f} pts). Outlined bar = your current selection.")
+                        else:
+                            st.caption("None of the simulated lifestyle changes lowers this patient's predicted risk; "
+                                       "discuss other options with the care team.")
 
-                base_curve = twin_state.current_glu + (35.0 if twin_state.is_hyper else 15.0) * np.sin(t_x * np.pi / 2) * np.exp(-t_x / 2.0)
-                if scenario_choice == "add_exercise":
-                    interv_curve = base_curve - 24.0 * np.exp(-((t_x - 0.75) ** 2) / 0.4)
-                elif scenario_choice == "add_meal":
-                    interv_curve = base_curve + 38.0 * np.exp(-((t_x - 1.0) ** 2) / 0.5)
-                else:
-                    interv_curve = base_curve - 12.0 * np.exp(-t_x / 2.5)
+                # What the model actually saw: measured vs simulated inputs
+                st.markdown("##### 📈 Model Inputs: Measured vs. Simulated (last 6 hours)")
+                st.caption("The dashed line is the patient's recorded data; the solid line is what the twin was given "
+                           "under the scenario. Both feed the same fusion model.")
+                orig_in = sim_res["original_inputs"]
+                mod_in = sim_res["modified_inputs"]
+                x_axis = orig_in["timestamp"] if "timestamp" in orig_in else pd.Series(range(len(orig_in)))
+                second = {"add_exercise": ("heart_rate_bpm", "Heart rate (bpm)"),
+                          "improve_sleep": ("hrv_ms", "HRV (ms)")}.get(scenario_choice)
 
-                fig_sim = go.Figure()
-                fig_sim.add_hrect(y0=70, y1=180, fillcolor="rgba(52, 211, 153, 0.08)", line_width=0)
+                fig_sim = make_subplots(rows=2 if second else 1, cols=1, shared_xaxes=True,
+                                        vertical_spacing=0.08, row_heights=[0.65, 0.35] if second else [1.0])
+                fig_sim.add_hrect(y0=70, y1=180, fillcolor="rgba(52, 211, 153, 0.08)", line_width=0, row=1, col=1)
                 fig_sim.add_trace(go.Scatter(
-                    x=t_hours, y=base_curve, mode="lines", name="Baseline Projected Trajectory",
+                    x=x_axis, y=orig_in["glucose_mg_dl"], mode="lines", name="Measured",
                     line=dict(color=c["text_muted"], dash="dash", width=2.0),
-                    hovertemplate="<b>Baseline</b>: %{y:.1f} mg/dL<extra></extra>",
-                ))
+                    hovertemplate="Measured: %{y:.0f} mg/dL<extra></extra>",
+                ), row=1, col=1)
                 fig_sim.add_trace(go.Scatter(
-                    x=t_hours, y=interv_curve, mode="lines", name=f"Scenario: {scenario_choice.replace('_', ' ').title()}",
+                    x=x_axis, y=mod_in["glucose_mg_dl"], mode="lines", name="Simulated",
                     line=dict(color=delta_badge_color, width=2.8),
-                    hovertemplate="<b>Scenario</b>: %{y:.1f} mg/dL<extra></extra>",
-                ))
-                fig_sim.add_hline(y=180, line_dash="dot", line_color=c["coral"], annotation_text="180 mg/dL Threshold", annotation_position="top right")
-                fig_sim.add_hline(y=70, line_dash="dot", line_color=c["amber"], annotation_text="70 mg/dL Threshold", annotation_position="bottom right")
-                fig_sim = apply_theme(fig_sim, theme_mode, height=340)
-                max_sim_val = max(240.0, float(max(base_curve.max(), interv_curve.max())) + 20.0)
-                fig_sim.update_layout(
-                    yaxis=dict(title="Glucose (mg/dL)", range=[40, max_sim_val]),
-                    xaxis=dict(title="Simulation Time Horizon (Hours:Minutes)"),
-                    showlegend=True,
-                )
+                    hovertemplate="Simulated: %{y:.0f} mg/dL<extra></extra>",
+                ), row=1, col=1)
+                fig_sim.add_hline(y=180, line_dash="dot", line_color=c["coral"], row=1, col=1)
+                if second:
+                    col, label = second
+                    fig_sim.add_trace(go.Scatter(x=x_axis, y=orig_in[col], mode="lines", showlegend=False,
+                                                 line=dict(color=c["text_muted"], dash="dash", width=1.6),
+                                                 hovertemplate=f"Measured {label}: %{{y:.0f}}<extra></extra>"), row=2, col=1)
+                    fig_sim.add_trace(go.Scatter(x=x_axis, y=mod_in[col], mode="lines", showlegend=False,
+                                                 line=dict(color=c["violet"], width=2.2),
+                                                 hovertemplate=f"Simulated {label}: %{{y:.0f}}<extra></extra>"), row=2, col=1)
+                    fig_sim.update_yaxes(title_text=label, row=2, col=1)
+                fig_sim = apply_theme(fig_sim, theme_mode, height=400 if second else 320)
+                fig_sim.update_yaxes(title_text="Glucose (mg/dL)", row=1, col=1)
+                fig_sim.update_layout(showlegend=True, legend=dict(orientation="h", y=1.1, x=0))
                 st.plotly_chart(fig_sim, use_container_width=True)
         except Exception as e:
             render_error_card("What-If Simulation Notice", "Unable to execute lifestyle simulation.", exc=e)

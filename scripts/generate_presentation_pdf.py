@@ -558,7 +558,7 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="slide-header">
     <div>
       <div class="category">Continuous Glucose Monitoring</div>
-      <h2>Continuous Glucose Trajectory & 2-Hour Forecast Cone</h2>
+      <h2>Continuous Glucose Trajectory, Twin Replay & 2-Hour Forecast</h2>
     </div>
     <div class="brand-badge">Sensor Telemetry</div>
   </div>
@@ -571,7 +571,8 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
         <h3>Telemetry & Trajectory Analytics</h3>
         <ul>
           <li><b>Standardized Target Corridor:</b> 70–180 mg/dL clinical zone shaded in green; excursions automatically color-coded in coral (>180) and amber (<70).</li>
-          <li><b>Predictive Horizon Cone:</b> Shaded 2-hour forecast region displaying exact spike probability and 95% confidence intervals.</li>
+          <li><b>2-Hour Forecast Window:</b> The next two hours shaded by the fusion model's spike probability and risk tier.</li>
+          <li><b>Twin Replay:</b> The twin re-run every hour on only the data available at that moment; each forecast is overlaid on the glucose that followed, with a time scrubber and a scorecard of spikes flagged in advance.</li>
           <li><b>Contextual Clinical Markers:</b> Ingested carbohydrate density (triangle markers) and exercise sessions (star markers) tagged along the trace.</li>
           <li><b>Ambulatory Glucose Profile (AGP):</b> Median curve with 5th–95th and 25th–75th IQR bands across the 24h clock, plus Day × Hour density heatmaps.</li>
         </ul>
@@ -601,9 +602,10 @@ SLIDES_HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="deck-card">
         <h3>Testing Interventions Before Prescription</h3>
         <ul>
-          <li><b>GLUT4 Translocation Walk:</b> Simulates 15–45 min brisk walking at varying intensities, modeling insulin-independent muscle glucose uptake.</li>
-          <li><b>Spike Risk Delta Badge:</b> Computes immediate probability shift (e.g. <b>65.2% to 32.1%, down 33.1 pts</b>) with tier transition from HIGH to MEDIUM/LOW.</li>
-          <li><b>Comparative 4h Trajectory:</b> Full-width visual comparison of Baseline Projected Trajectory vs Intervention Scenario curve.</li>
+          <li><b>Live Scenario Controls:</b> Brisk walk (duration, intensity), skipped snack, better sleep, or a carbohydrate challenge; results update as the sliders move.</li>
+          <li><b>Spike Risk Delta Badge:</b> The fusion model's probability before and after the scenario, with the risk-tier transition.</li>
+          <li><b>Intervention Ranking:</b> Every lifestyle intervention is run through the model and ranked, showing which change helps this patient most.</li>
+          <li><b>Measured vs. Simulated Inputs:</b> The last 6 h of glucose and vitals as recorded and as modified by the scenario, i.e. exactly what the model received.</li>
           <li><b>Dietary & Sleep Counterfactuals:</b> Simulates high-carb meals, late-night snack omissions, and sleep hygiene improvements.</li>
         </ul>
       </div>
