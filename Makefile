@@ -5,7 +5,7 @@
 PYTHON ?= python
 PIP    ?= pip
 
-.PHONY: setup data train train-baseline train-fusion app test clean help
+.PHONY: setup data real-data pipeline hparam train train-baseline train-fusion app test clean help
 
 help:  ## Show available targets
 	@echo "Available targets:"

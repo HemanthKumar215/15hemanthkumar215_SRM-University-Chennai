@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/pytest-58%20passed-brightgreen.svg)](./tests/)
+[![Tests](https://img.shields.io/badge/pytest-63%20passed-brightgreen.svg)](./tests/)
 [![Architecture PDF](https://img.shields.io/badge/docs-Architecture%20PDF-2DD4BF.svg)](./docs/architecture.pdf)
 [![Presentation PDF](https://img.shields.io/badge/docs-Presentation%20PDF-8B5CF6.svg)](./docs/presentation.pdf)
 

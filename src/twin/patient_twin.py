@@ -95,6 +95,9 @@ class PatientTwin:
         self.ts_std = np.array(norm_stats["ts_std"], dtype=np.float32)
         self.static_mean = np.array(norm_stats["static_mean"], dtype=np.float32)
         self.static_std = np.array(norm_stats["static_std"], dtype=np.float32)
+        # Guard against zero-variance features in older checkpoints
+        self.ts_std = np.clip(self.ts_std, 1e-6, None)
+        self.static_std = np.clip(self.static_std, 1e-6, None)
 
         # Encode static features
         self.static_vec = self._encode_static(static_profile)
@@ -140,18 +143,28 @@ class PatientTwin:
         PredictionResult or None
             None if insufficient data in the buffer.
         """
-        if len(self.sensor_buffer) < self.lookback:
+        result = self._predict_buffer(self.sensor_buffer)
+        if result is not None:
+            self.prediction_history.append(result)
+        return result
+
+    def _predict_buffer(self, buffer: List[Dict[str, float]]) -> Optional[PredictionResult]:
+        """Run the model on ``buffer`` without recording prediction history."""
+        if len(buffer) < self.lookback:
             logger.debug("Not enough data for prediction (%d < %d)",
-                         len(self.sensor_buffer), self.lookback)
+                         len(buffer), self.lookback)
             return None
 
         # Extract sensor window
-        window_data = self.sensor_buffer[-self.lookback:]
-        ts_array = np.array([[r.get(c, 0.0) for c in _SENSOR_COLS]
-                              for r in window_data], dtype=np.float32)
+        window_data = buffer[-self.lookback:]
+        ts_df = pd.DataFrame(
+            [[r.get(c, np.nan) for c in _SENSOR_COLS] for r in window_data],
+            columns=_SENSOR_COLS,
+        ).apply(pd.to_numeric, errors="coerce")
 
-        # Handle NaN
-        ts_array = np.nan_to_num(ts_array, nan=0.0)
+        # Handle NaN exactly as the training datasets do (forward-fill, then 0)
+        # so sparse uploads (e.g. CGM-only exports) match the training distribution.
+        ts_array = ts_df.ffill().fillna(0).values.astype(np.float32)
 
         # Normalise
         ts_norm = (ts_array - self.ts_mean) / self.ts_std
@@ -181,14 +194,12 @@ class PatientTwin:
         if isinstance(timestamp, str):
             timestamp = pd.Timestamp(timestamp)
 
-        result = PredictionResult(
+        return PredictionResult(
             timestamp=timestamp,
-            probability=round(probability, 4),
+            probability=round(float(probability), 4),
             risk_level=risk_level,
             glucose_current=current_glucose,
         )
-        self.prediction_history.append(result)
-        return result
 
     def what_if(self, scenario: str, **kwargs: Any) -> Dict[str, Any]:
         """Run a what-if simulation by modifying the sensor buffer.
@@ -215,8 +226,8 @@ class PatientTwin:
             Keys: ``original_prob``, ``modified_prob``, ``original_risk``,
             ``modified_risk``, ``delta_prob``, ``scenario``.
         """
-        # Original prediction
-        original = self.predict()
+        # Original prediction (simulations never touch prediction_history)
+        original = self._predict_buffer(self.sensor_buffer)
         if original is None:
             return {"error": "Not enough data for prediction"}
 
@@ -274,15 +285,7 @@ class PatientTwin:
         else:
             return {"error": f"Unknown scenario: {scenario}"}
 
-        # Run prediction on modified buffer
-        original_buffer = self.sensor_buffer
-        self.sensor_buffer = modified_buffer
-        modified_result = self.predict()
-        self.sensor_buffer = original_buffer  # restore
-
-        # Remove the extra prediction from history
-        if modified_result:
-            self.prediction_history.pop()
+        modified_result = self._predict_buffer(modified_buffer)
 
         return {
             "scenario": scenario,

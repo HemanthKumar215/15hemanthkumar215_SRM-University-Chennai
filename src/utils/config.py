@@ -36,21 +36,23 @@ def load_config(path: str | Path | None = None) -> Dict[str, Any]:
         Parsed configuration dictionary.
     """
     global _CONFIG_CACHE
-    if _CONFIG_CACHE is not None:
-        return _CONFIG_CACHE
-
     if path is None:
+        if _CONFIG_CACHE is not None:
+            return _CONFIG_CACHE
         path = _PROJECT_ROOT / "config.yaml"
     else:
+        # An explicit path is always honoured and never replaces the default cache
         path = Path(path)
 
     if not path.exists():
         raise FileNotFoundError(f"Configuration file not found: {path}")
 
     with open(path, "r", encoding="utf-8") as fh:
-        _CONFIG_CACHE = yaml.safe_load(fh)
+        cfg = yaml.safe_load(fh)
 
-    return _CONFIG_CACHE
+    if path == _PROJECT_ROOT / "config.yaml":
+        _CONFIG_CACHE = cfg
+    return cfg
 
 
 def get(section: str, key: str | None = None, default: Any = None) -> Any:
