@@ -4,6 +4,7 @@
 > *A Multimodal Deep Physiological Digital Twin & 2-Hour Predictive Horizon Decision Engine for Type 2 Diabetes*
 
 [![Live Demo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://15hemanthkumar215srm-university-chennai-wvh3rcqykcmuk5mcjxyqgk.streamlit.app/)
+[![Demo Video](https://img.shields.io/badge/YouTube-Demo%20Video-FF0000.svg?logo=youtube)](https://youtu.be/qOBy-GMMCDs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
@@ -25,7 +26,7 @@
 | **Submission Folder / Repository** | `15hemanthkumar215_SRM-University-Chennai` (Team Name_College Name) |
 | **Team Members** | P Hemanth Kumar — Team Leader (sole member) |
 | **Live Dashboard** | [https://15hemanthkumar215srm-university-chennai-wvh3rcqykcmuk5mcjxyqgk.streamlit.app/](https://15hemanthkumar215srm-university-chennai-wvh3rcqykcmuk5mcjxyqgk.streamlit.app/) (Streamlit Community Cloud; first load after inactivity takes ~1 min) |
-| **Demo Video** | `TODO: Add 20+ minute demo video link (YouTube / Google Drive)` |
+| **Demo Video** | [https://youtu.be/qOBy-GMMCDs](https://youtu.be/qOBy-GMMCDs) (YouTube, unlisted) |
 | **Architecture Diagram (PDF)** | [docs/architecture.pdf](./docs/architecture.pdf) • [Interactive HTML walkthrough](./docs/architecture.html) |
 | **Presentation Deck (PDF, 14 slides)** | [docs/presentation.pdf](./docs/presentation.pdf) • [Interactive HTML slideshow](./docs/presentation.html) |
 | **License** | [MIT License](./LICENSE) |
@@ -42,7 +43,7 @@
 | Prediction of an adverse event | Glucose ≥ 180 mg/dL within the next 2 hours ([`src/features/dataset.py`](./src/features/dataset.py)) |
 | Clinician UI dashboard | [Live dashboard](https://15hemanthkumar215srm-university-chennai-wvh3rcqykcmuk5mcjxyqgk.streamlit.app/) • [`app/streamlit_app.py`](./app/streamlit_app.py) • [Dashboard Showcase](#dashboard) |
 | Anonymized / synthetic data only | [Data Provenance](#data-provenance) • [docs/datasets.md](./docs/datasets.md) |
-| Demo video (20+ minutes) | Demo Video row above |
+| Demo video | [https://youtu.be/qOBy-GMMCDs](https://youtu.be/qOBy-GMMCDs) |
 | Open-source license | [MIT License](./LICENSE) |
 | Architecture diagram (PDF/PPT) | [docs/architecture.pdf](./docs/architecture.pdf) |
 | Presentation (PDF/PPT) | [docs/presentation.pdf](./docs/presentation.pdf) |
